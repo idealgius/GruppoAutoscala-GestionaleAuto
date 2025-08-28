@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Ricambi{% endblock %}
+
+{% block content %}
+<h1>🔧 Elenco Ricambi</h1>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap;">
+  <a href="/inserisci_ricambio" class="button">➕ Inserisci Ricambio</a>
+  <div style="color:#666; font-size:0.95em;">Codici unici per utente</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nome</th>
+      <th>Codice</th>
+      <th>Quantità</th>
+      <th>Azioni</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in ricambi %}
+    <tr>
+      <td>{{ r['id'] }}</td>
+      <td>{{ r['nome'] }}</td>
+      <td>{{ r['codice'] }}</td>
+      <td>
+        {{ r['quantita'] }}
+        {% if r['quantita'] <= 2 %}
+          {% if r['quantita'] == 0 %}
+            <span style="color:red; font-weight:bold;">❌ Esaurito</span>
+          {% elif r['quantita'] == 1 %}
+            <span style="color:orange; font-weight:bold;">⚠️ Solo 1 rimasto</span>
+          {% else %}
+            <span style="color:orange; font-weight:bold;">⚠️ Giacenza bassa</span>
+          {% endif %}
+        {% endif %}
+      </td>
+      <td class="action-buttons">
+        <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica">✏️ Modifica</a>
+        <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina" onclick="return confirm('Eliminare questo ricambio?')">🗑️ Elimina</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

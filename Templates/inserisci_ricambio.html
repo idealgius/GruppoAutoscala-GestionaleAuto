@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Ricambio{% endblock %}
+
+{% block content %}
+<h1>➕ Inserisci Ricambio</h1>
+
+<form action="/salva_ricambio" method="POST" style="max-width:600px; margin:0 auto;">
+    <label for="nome">Nome ricambio:</label>
+    <input type="text" id="nome" name="nome" required>
+
+    <label for="codice">Codice (unico):</label>
+    <input type="text" id="codice" name="codice" required>
+
+    <button type="submit">💾 Salva Ricambio</button>
+</form>
+
+<div style="text-align:center; margin-top:20px;">
+  <a class="button" href="/ricambi">🔙 Torna ai ricambi</a>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Modello{% endblock %}
+
+{% block content %}
+<h1>➕ Inserisci Modello</h1>
+
+<form action="/salva_modello" method="POST" style="max-width:700px; margin:0 auto;">
+    <label for="marca">Marca:</label>
+    <input type="text" name="marca" id="marca" required>
+
+    <label for="modello">Modello:</label>
+    <input type="text" name="modello" id="modello" required>
+
+    <label for="cilindrata">Cilindrata:</label>
+    <input type="text" name="cilindrata" id="cilindrata">
+
+    <label for="kw">kW:</label>
+    <input type="text" name="kw" id="kw">
+
+    <label for="carburante">Carburante:</label>
+    <input type="text" name="carburante" id="carburante">
+
+    <label for="codice_motore">Codice Motore:</label>
+    <input type="text" name="codice_motore" id="codice_motore">
+
+    <button type="submit">💾 Salva Modello</button>
+</form>
+
+<div style="text-align:center; margin-top:20px;">
+  <a class="button" href="/modelli">🔙 Torna ai modelli</a>
+</div>
+{% endblock %}

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Gestione Concessionaria{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Roboto', sans-serif; background-color: #004080; color: #333; }
+        header { background-color: #004080; padding: 30px 0 20px 0; text-align: center; }
+        header img { height: 160px; width: auto; cursor: pointer; }
+        nav { background-color: #003366; display: flex; justify-content: center; gap: 20px; padding: 12px 0; flex-wrap: wrap; }
+        nav a { color: white; text-decoration: none; font-weight: bold; padding: 8px 16px; border-radius: 6px; transition: background-color 0.3s; }
+        nav a:hover { background-color: #0052A3; }
+        main { background-color: #ffffff; max-width: 1200px; margin: 30px auto; padding: 40px 50px; border-radius: 20px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
+        h1 { text-align: center; color: #004080; margin-bottom: 30px; font-size: 2em; }
+        a.button { display: inline-block; padding: 12px 20px; margin: 20px 0; background-color: #0052A3; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: background-color 0.3s; }
+        a.button:hover { background-color: #003f7f; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 14px 10px; border: 1px solid #ccc; text-align: center; font-size: 0.95em; }
+        th { background-color: #f8f8f8; font-weight: bold; }
+        .action-buttons a { padding: 8px 12px; border-radius: 6px; color: white; text-decoration: none; margin: 0 3px; display: inline-block; }
+        .modifica { background-color: #f0ad4e; }
+        .elimina { background-color: #d9534f; }
+        button { background-color: #0052A3; color: white; padding: 12px 20px; border: none; cursor: pointer; border-radius: 6px; margin-top: 16px; }
+        button:hover { background-color: #003f7f; }
+        input, select { padding: 10px; width: 100%; margin: 12px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 1em; }
+        @media screen and (max-width: 768px) {
+            main { padding: 20px; }
+            table, thead, tbody, th, td, tr { font-size: 0.85em; }
+            header img { height: 100px; }
+            nav { flex-direction: column; gap: 10px; }
+        }
+        .flash-message { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="{{ url_for('home') }}">
+            <img src="{{ url_for('static', filename='logo.26861.png') }}" alt="Logo Gruppo AutoscalA">
+        </a>
+    </header>
+
+    <nav>
+        <a href="{{ url_for('lista_clienti') }}">👥 Clienti</a>
+        <a href="{{ url_for('inserisci_cliente') }}">➕ Inserisci Cliente</a>
+        <a href="{{ url_for('lista_vetture') }}">🚗 Vetture</a>
+        <a href="{{ url_for('inserisci_vettura') }}">➕ Inserisci Vettura</a>
+        {% if session.get('username') %}
+            <a href="{{ url_for('logout') }}">🔒 Logout ({{ session['username'] }})</a>
+        {% endif %}
+    </nav>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div id="flash-container" style="text-align:center; margin:20px 0;">
+          {% for message in messages %}
+            <p class="flash-message" style="background-color:#d4edda; color:#155724; padding:12px 20px; border-radius:6px; display:inline-block;">
+              {{ message }}
+            </p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // Nascondi i messaggi flash dopo 10 secondi
+        window.addEventListener('DOMContentLoaded', () => {
+            const flashContainer = document.getElementById('flash-container');
+            if (flashContainer) {
+                setTimeout(() => { flashContainer.style.display = 'none'; }, 10000);
+            }
+        });
+
+        // Toggle password universale
+        function togglePassword(btn) {
+            const input = btn.previousElementSibling;
+            if (input.type === "password") {
+                input.type = "text";
+                btn.textContent = "🙈";
+            } else {
+                input.type = "password";
+                btn.textContent = "👁️";
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleButtons = document.querySelectorAll('.toggle-password');
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', () => togglePassword(btn));
+            });
+        });
+    </script>
+</body>
+</html>

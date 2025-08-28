@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Vettura{% endblock %}
+
+{% block content %}
+<h1>🚗 Inserisci una nuova vettura</h1>
+
+<form action="/salva_vettura" method="POST">
+    <label for="cliente_id">ID Cliente:</label>
+    <input type="number" name="cliente_id" required>
+
+    <label for="marca">Marca:</label>
+    <select name="marca" required>
+        <option value="">-- Seleziona una marca --</option>
+        <option value="ALFA ROMEO">ALFA ROMEO</option>
+        <option value="AUDI">AUDI</option>
+        <option value="BMW">BMW</option>
+        <option value="CHEVROLET">CHEVROLET</option>
+        <option value="CHRYSLER">CHRYSLER</option>
+        <option value="CITROEN">CITROEN</option>
+        <option value="CUPRA">CUPRA</option>
+        <option value="DACIA">DACIA</option>
+        <option value="DAEWOO">DAEWOO</option>
+        <option value="DAIHATSU">DAIHATSU</option>
+        <option value="DODGE">DODGE</option>
+        <option value="DR">DR</option>
+        <option value="EVO">EVO</option>
+        <option value="FIAT">FIAT</option>
+        <option value="FORD">FORD</option>
+        <option value="HONDA">HONDA</option>
+        <option value="HYUNDAI">HYUNDAI</option>
+        <option value="INFINITI">INFINITI</option>
+        <option value="ISUZU">ISUZU</option>
+        <option value="IVECO">IVECO</option>
+        <option value="JAGUAR">JAGUAR</option>
+        <option value="JEEP">JEEP</option>
+        <option value="KIA">KIA</option>
+        <option value="LADA">LADA</option>
+        <option value="LANCIA">LANCIA</option>
+        <option value="LAND ROVER">LAND ROVER</option>
+        <option value="LEXUS">LEXUS</option>
+        <option value="LYNK&CO">LYNK&amp;CO</option>
+        <option value="MAN">MAN</option>
+        <option value="MASERATI">MASERATI</option>
+        <option value="MAXUS">MAXUS</option>
+        <option value="MAZDA">MAZDA</option>
+        <option value="MERCEDES">MERCEDES</option>
+        <option value="MG">MG</option>
+        <option value="MINI">MINI</option>
+        <option value="MITSUBISHI">MITSUBISHI</option>
+        <option value="NISSAN">NISSAN</option>
+        <option value="OPEL">OPEL</option>
+        <option value="PEUGEOT">PEUGEOT</option>
+        <option value="PIAGGIO">PIAGGIO</option>
+        <option value="POLESTAR">POLESTAR</option>
+        <option value="PORSCHE">PORSCHE</option>
+        <option value="RENAULT">RENAULT</option>
+        <option value="ROVER">ROVER</option>
+        <option value="SAAB">SAAB</option>
+        <option value="SEAT">SEAT</option>
+        <option value="SKODA">SKODA</option>
+        <option value="SMART">SMART</option>
+        <option value="SSANGYONG">SSANGYONG</option>
+        <option value="SUBARU">SUBARU</option>
+        <option value="SUZUKI">SUZUKI</option>
+        <option value="TATA">TATA</option>
+        <option value="TESLA">TESLA</option>
+        <option value="TOYOTA">TOYOTA</option>
+        <option value="VOLKSWAGEN">VOLKSWAGEN</option>
+        <option value="VOLVO">VOLVO</option>
+    </select>
+
+    <label for="modello">Modello:</label>
+    <input type="text" name="modello" required>
+
+    <label for="cilindrata">Cilindrata:</label>
+    <input type="text" name="cilindrata" required>
+
+    <label for="kw">kW:</label>
+    <input type="text" name="kw" required>
+
+    <label for="carburante">Carburante:</label>
+    <input type="text" name="carburante" required>
+
+    <label for="targa">Targa:</label>
+    <input type="text" name="targa" required>
+
+    <label for="telaio">Telaio:</label>
+    <input type="text" name="telaio" required>
+
+    <label for="immatricolazione">Data immatricolazione:</label>
+    <input type="date" name="immatricolazione">
+
+    <label for="km">Chilometraggio:</label>
+    <input type="text" name="km">
+
+    <label for="cambio">Cambio (manuale/automatico):</label>
+    <input type="text" name="cambio">
+
+    <label for="codice_motore">Codice motore (opzionale):</label>
+    <input type="text" name="codice_motore">
+
+    <button type="submit">💾 Salva Vettura</button>
+</form>
+
+<a class="button" href="/vetture">🔙 Torna all’elenco vetture</a>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Modello{% endblock %}
+
+{% block content %}
+<h1>✏️ Modifica Modello</h1>
+
+<form action="/aggiorna_modello/{{ modello['id'] }}" method="POST" style="max-width:700px; margin:0 auto;">
+    <label for="marca">Marca:</label>
+    <input type="text" id="marca" name="marca" value="{{ modello['marca'] }}" required>
+
+    <label for="modello">Modello:</label>
+    <input type="text" id="modello" name="modello" value="{{ modello['modello'] }}" required>
+
+    <label for="cilindrata">Cilindrata:</label>
+    <input type="text" id="cilindrata" name="cilindrata" value="{{ modello['cilindrata'] }}">
+
+    <label for="kw">kW:</label>
+    <input type="text" id="kw" name="kw" value="{{ modello['kw'] }}">
+
+    <label for="carburante">Carburante:</label>
+    <input type="text" id="carburante" name="carburante" value="{{ modello['carburante'] }}">
+
+    <label for="codice_motore">Codice Motore:</label>
+    <input type="text" id="codice_motore" name="codice_motore" value="{{ modello['codice_motore'] }}">
+
+    <button type="submit">💾 Salva modifiche</button>
+</form>
+
+<div style="text-align:center; margin-top:20px;">
+  <a class="button" href="/modelli">🔙 Torna ai modelli</a>
+</div>
+{% endblock %}

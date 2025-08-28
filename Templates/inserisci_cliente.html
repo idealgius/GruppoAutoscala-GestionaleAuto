@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Cliente{% endblock %}
+
+{% block content %}
+<h1>➕ Inserisci un nuovo cliente</h1>
+
+<form action="/salva_cliente" method="POST" style="max-width:600px; margin:0 auto;">
+    <label for="nome">Nome:</label>
+    <input type="text" name="nome" required>
+
+    <label for="cognome">Cognome:</label>
+    <input type="text" name="cognome" required>
+
+    <label for="data_nascita">Data di nascita:</label>
+    <input type="date" name="data_nascita" required>
+
+    <label for="provincia">Provincia:</label>
+    <input type="text" name="provincia" required>
+
+    <label for="comune">Comune di residenza:</label>
+    <input type="text" name="comune" required>
+
+    <label for="codice_fiscale">Codice fiscale:</label>
+    <input type="text" name="codice_fiscale" required>
+
+    <label for="telefono">Telefono:</label>
+    <input type="text" name="telefono">
+
+    <label for="email">Email:</label>
+    <input type="email" name="email">
+
+    <button type="submit">💾 Salva Cliente</button>
+</form>
+
+<div style="text-align:center; margin-top:20px;">
+    <a class="button" href="/clienti">🔙 Torna alla lista clienti</a>
+</div>
+{% endblock %}

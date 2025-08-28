@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Elenco Vetture{% endblock %}
+
+{% block content %}
+<h1>🚗 Elenco Vetture Registrate</h1>
+
+<a href="/inserisci_vettura" class="button">➕ Aggiungi nuova vettura</a>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Targa</th>
+            <th>Marca</th>
+            <th>Modello</th>
+            <th>Cilindrata</th>
+            <th>kW</th>
+            <th>Carburante</th>
+            <th>Codice Motore</th>
+            <th>Cliente Associato</th>
+            <th>Azioni</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in vetture %}
+        <tr>
+            <td>{{ v[0] }}</td>
+            <td>{{ v[1] }}</td>
+            <td>{{ v[2] }}</td>
+            <td>{{ v[3] }}</td>
+            <td>{{ v[4] }}</td>
+            <td>{{ v[5] }}</td>
+            <td>{{ v[6] }}</td>
+            <td>{{ v[7] }}</td>
+            <td>{{ v[8] }}</td>
+            <td class="action-buttons">
+                <a href="/modifica_vettura/{{ v[0] }}" class="modifica">✏️</a>
+                <a href="/elimina_vettura/{{ v[0] }}" class="elimina" onclick="return confirm('Confermi l\'eliminazione della vettura?')">🗑️</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; margin-bottom:30px;">🔑 Login</h1>
+
+<form action="/login" method="POST" style="max-width:400px; margin:0 auto; position:relative;">
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required>
+
+    <label for="password" style="position:relative;">Password:</label>
+    <div style="position:relative; width:100%;">
+        <input type="password" id="password" name="password" required style="padding-right:35px; transition: border-color 0.3s;">
+        <button type="button" id="togglePassword" style="
+            position:absolute;
+            right:10px;
+            top:50%;
+            transform: translateY(-50%);
+            background:none;
+            border:none;
+            cursor:pointer;
+            padding:0;
+            margin:0;
+            font-size:1.2em;
+            line-height:1;
+            transition: color 0.3s;
+        ">👁️</button>
+    </div>
+
+    <button type="submit" style="margin-top:20px;">🔓 Accedi</button>
+</form>
+
+<script>
+    const togglePassword = document.getElementById("togglePassword");
+    const password = document.getElementById("password");
+
+    togglePassword.addEventListener("click", function() {
+        const type = password.getAttribute("type") === "password" ? "text" : "password";
+        password.setAttribute("type", type);
+
+        // Cambio colore icona per transizione
+        this.style.color = type === "password" ? "#000" : "#007BFF";
+
+        // Cambio emoji senza toccare layout
+        this.textContent = type === "password" ? "👁️" : "🙈";
+    });
+</script>
+{% endblock %}

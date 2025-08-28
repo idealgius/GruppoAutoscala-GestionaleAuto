@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Modelli{% endblock %}
+
+{% block content %}
+<h1>📚 Elenco Modelli</h1>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <a href="/inserisci_modello" class="button">➕ Inserisci Modello</a>
+  <div style="color:#666; font-size:0.95em;">Modelli registrati dall'utente</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Marca</th>
+      <th>Modello</th>
+      <th>Cilindrata</th>
+      <th>kW</th>
+      <th>Codice Motore</th>
+      <th>Azioni</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in modelli %}
+    <tr>
+      <td>{{ m['id'] }}</td>
+      <td>{{ m['marca'] }}</td>
+      <td>{{ m['modello'] }}</td>
+      <td>{{ m['cilindrata'] or '—' }}</td>
+      <td>{{ m['kw'] or '—' }}</td>
+      <td>{{ m['codice_motore'] or '—' }}</td>
+      <td class="action-buttons">
+        <a href="/modifica_modello/{{ m['id'] }}" class="modifica">✏️ Modifica</a>
+        <a href="/elimina_modello/{{ m['id'] }}" class="elimina" 
+           onclick="return confirm('Eliminare questo modello?')">🗑️ Elimina</a>
+        <a href="/modello/{{ m['id'] }}/ricambi" class="modifica">🔗 Ricambi</a>
+      </td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="7" style="text-align:center;">Nessun modello registrato.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
