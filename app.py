@@ -2,8 +2,10 @@ from flask import Flask, render_template, request, redirect, session, url_for, f
 import sqlite3
 from functools import wraps
 import hashlib
+import os  # per rendere il percorso dei template dinamico
 
-app = Flask(__name__)
+# ----- Avvio app con percorso templates corretto -----
+app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
 app.secret_key = "supersecretkey123"  # 🔒 Cambia in produzione
 
 # ---------- Mappa username -> nome reale ----------
