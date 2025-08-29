@@ -3,6 +3,64 @@ import sqlite3
 from functools import wraps
 import hashlib
 import os  # per rendere il percorso dei template dinamico
+import re
+
+# ----- DB wrapper per compatibilità SQLite <-> PostgreSQL -----
+# Questo wrapper permette a tutto il resto del codice di continuare
+# a chiamare conn.execute(...).fetchone()/fetchall(), conn.commit(), conn.close()
+# senza dover cambiare la logica esistente.
+class CursorWrapper:
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def fetchone(self):
+        return self._cursor.fetchone()
+
+    def fetchall(self):
+        return self._cursor.fetchall()
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+
+class DBConn:
+    def __init__(self, raw_conn, kind):
+        self._conn = raw_conn
+        self.kind = kind  # 'sqlite' o 'pg'
+
+    def execute(self, query, params=()):
+        # Se PostgreSQL dobbiamo adattare i placeholder:
+        # - query con parametri posizionali: ? -> %s
+        # - query con parametri named :name -> %(name)s
+        if self.kind == 'sqlite':
+            # sqlite3 accepts both tuples and dicts for parameters
+            return self._conn.execute(query, params)
+        else:
+            # Postgres (psycopg2)
+            import psycopg2.extras  # import locale per sicurezza
+            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            # Se params è una mapping (dict-like) usiamo conversione :name -> %(name)s
+            if isinstance(params, dict):
+                q = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', query)
+                cur.execute(q, params)
+            else:
+                # params è tupla/list oppure singolo valore: converti ? -> %s
+                # Nota: semplice replace; sufficiente per il nostro SQL attuale
+                q = query.replace('?', '%s')
+                # Se params è un singolo valore (non sequenza), psycopg2 vuole una tupla
+                if isinstance(params, (list, tuple)):
+                    cur.execute(q, params)
+                else:
+                    cur.execute(q, (params,))
+            return CursorWrapper(cur)
+
+    def commit(self):
+        return self._conn.commit()
+
+    def close(self):
+        return self._conn.close()
+
 
 # ----- Avvio app con percorso templates corretto -----
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
@@ -18,17 +76,40 @@ NOMI_REAL = {
 
 # ---------- Connessione DB ----------
 def get_db():
-    conn = sqlite3.connect("concessionaria.db")
-    conn.row_factory = sqlite3.Row
-    return conn
+    """
+    Restituisce un oggetto DBConn che espone execute(...).fetchone()/fetchall(),
+    commit() e close(). Sceglie PostgreSQL se è definita la variabile d'ambiente
+    DATABASE_URL (ad es. fornita da Render), altrimenti usa SQLite locale.
+    """
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        # Connessione a PostgreSQL
+        import psycopg2
+        # psycopg2.extras.RealDictCursor verrà usato nella classe DBConn
+        conn = psycopg2.connect(db_url, sslmode="require")
+        return DBConn(conn, "pg")
+    else:
+        # Connessione a SQLite (fallback locale)
+        conn = sqlite3.connect("concessionaria.db", check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return DBConn(conn, "sqlite")
+
 
 # ---------- Assicura colonna "quantita" in ricambi ----------
+# Manteniamo la stessa logica: tentiamo di aggiungere la colonna e proseguiamo in caso di errore
 conn = get_db()
 try:
+    # Nota: per PostgreSQL le query usano la conversione dei placeholder dentro DBConn
     conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
-except sqlite3.OperationalError:
-    pass  # colonna già esistente
-conn.close()
+    conn.commit()
+except Exception:
+    # se la colonna esiste o altro errore, ignoriamo (stessa logica originale)
+    pass
+finally:
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 # ---------- Decoratore protezione ----------
 def login_required(f):
@@ -423,7 +504,8 @@ def salva_ricambio():
         """, dati)
         conn.commit()
         flash("✅ Ricambio salvato correttamente")
-    except sqlite3.IntegrityError:
+    except Exception:
+        # sqlite3.IntegrityError -> psycopg2.IntegrityError; manteniamo comportamento generico
         flash("❌ Codice ricambio già esistente")
     finally:
         conn.close()
@@ -462,7 +544,7 @@ def aggiorna_ricambio(id):
         """, dati)
         conn.commit()
         flash("✅ Ricambio aggiornato correttamente")
-    except sqlite3.IntegrityError:
+    except Exception:
         flash("❌ Codice ricambio già in uso")
     finally:
         conn.close()
@@ -550,7 +632,7 @@ def aggiungi_ricambio_a_modello(modello_id):
         """, (modello_id, ricambio_id, session["user_id"]))
         conn.commit()
         flash("✅ Ricambio associato al modello")
-    except sqlite3.IntegrityError:
+    except Exception:
         flash("ℹ️ Ricambio già associato a questo modello")
     finally:
         conn.close()
