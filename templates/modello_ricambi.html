@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Ricambi per Modello{% endblock %}
+
+{% block content %}
+<h1>🔗 Ricambi per: {{ modello['marca'] }} {{ modello['modello'] }}</h1>
+
+<div style="display:flex; gap:20px; align-items:center; margin-bottom:18px; flex-wrap: wrap;">
+  <a class="button" href="{{ url_for('lista_modelli') }}">🔙 Torna ai modelli</a>
+  <div style="color:#666;">Modello ID: {{ modello['id'] }}</div>
+</div>
+
+<h3>Ricambi associati</h3>
+{% if associati %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nome</th>
+      <th>Codice</th>
+      <th>Azioni</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in associati %}
+    <tr>
+      <td>{{ r['id'] }}</td>
+      <td>{{ r['nome'] }}</td>
+      <td>{{ r['codice'] }}</td>
+      <td class="action-buttons">
+        <form action="{{ url_for('rimuovi_ricambio_da_modello', modello_id=modello['id'], ricambio_id=r['id']) }}" method="POST" style="display:inline;">
+          <button type="submit" class="elimina">❌ Rimuovi</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>Nessun ricambio associato a questo modello.</p>
+{% endif %}
+
+<hr style="margin:18px 0;" />
+
+<h3>Aggiungi ricambio al modello</h3>
+{% if non_associati %}
+<form action="{{ url_for('aggiungi_ricambio_a_modello', modello_id=modello['id']) }}" method="POST" style="max-width:600px;">
+  <label for="ricambio_id">Scegli ricambio:</label>
+  <select name="ricambio_id" id="ricambio_id" required>
+    <option value="">-- Seleziona --</option>
+    {% for r in non_associati %}
+      <option value="{{ r['id'] }}">{{ r['nome'] }} — {{ r['codice'] }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" style="margin-top:10px;">➕ Associa ricambio</button>
+</form>
+{% else %}
+<p>Tutti i ricambi disponibili sono già associati a questo modello (o non esistono ricambi).</p>
+{% endif %}
+{% endblock %}

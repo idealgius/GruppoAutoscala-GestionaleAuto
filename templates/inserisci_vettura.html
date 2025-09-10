@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Vettura{% endblock %}
+
+{% block content %}
+<h1>🚗 Inserisci una nuova vettura</h1>
+
+<form action="/salva_vettura" method="POST">
+    <label for="cliente_id">ID Cliente:</label>
+    <input type="number" name="cliente_id" required value="{{ request.form.get('cliente_id') or '' }}">
+
+    <label for="marca">Marca:</label>
+    <select name="marca" required>
+        <option value="">-- Seleziona una marca --</option>
+        {% for m in [
+            "ALFA ROMEO","AUDI","BMW","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA",
+            "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI",
+            "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER",
+            "LEXUS","LYNK&CO","MAN","MASERATI","MAXUS","MAZDA","MERCEDES","MG","MINI",
+            "MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO","POLESTAR","PORSCHE","RENAULT",
+            "ROVER","SAAB","SEAT","SKODA","SMART","SSANGYONG","SUBARU","SUZUKI","TATA",
+            "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
+        ] %}
+            <option value="{{ m }}" {% if request.form.get('marca') == m %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="modello">Modello:</label>
+    <input type="text" name="modello" required value="{{ request.form.get('modello') or '' }}">
+
+    <label for="cilindrata">Cilindrata:</label>
+    <input type="text" name="cilindrata" required value="{{ request.form.get('cilindrata') or '' }}">
+
+    <label for="kw">kW:</label>
+    <input type="text" name="kw" required value="{{ request.form.get('kw') or '' }}">
+
+    <label for="carburante">Carburante:</label>
+    <input type="text" name="carburante" required value="{{ request.form.get('carburante') or '' }}">
+
+    <label for="targa">Targa:</label>
+    <input type="text" name="targa" required value="{{ request.form.get('targa') or '' }}">
+
+    <label for="telaio">Telaio:</label>
+    <input type="text" name="telaio" required value="{{ request.form.get('telaio') or '' }}">
+
+    <label for="immatricolazione">Data immatricolazione:</label>
+    <input type="date" name="immatricolazione" value="{{ request.form.get('immatricolazione') or '' }}">
+
+    <label for="km">Chilometraggio:</label>
+    <input type="text" name="km" value="{{ request.form.get('km') or '' }}">
+
+    <label for="cambio">Cambio (manuale/automatico):</label>
+    <input type="text" name="cambio" value="{{ request.form.get('cambio') or '' }}">
+
+    <label for="codice_motore">Codice motore (opzionale):</label>
+    <input type="text" name="codice_motore" value="{{ request.form.get('codice_motore') or '' }}">
+
+    <button type="submit">💾 Salva Vettura</button>
+</form>
+
+<a class="button" href="/vetture">🔙 Torna all’elenco vetture</a>
+{% endblock %}

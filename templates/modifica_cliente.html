@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Cliente{% endblock %}
+
+{% block content %}
+<h1>✏️ Modifica Cliente</h1>
+
+<form action="/aggiorna_cliente/{{ cliente[0] }}" method="POST" style="max-width:600px; margin:0 auto;">
+    <label for="nome">Nome:</label>
+    <input type="text" id="nome" name="nome" value="{{ cliente[1] or '' }}" required>
+
+    <label for="cognome">Cognome:</label>
+    <input type="text" id="cognome" name="cognome" value="{{ cliente[2] or '' }}" required>
+
+    <label for="data_nascita">Data di nascita:</label>
+    <input type="date" id="data_nascita" name="data_nascita" value="{{ cliente[3] or '' }}">
+
+    <label for="provincia">Provincia:</label>
+    <input type="text" id="provincia" name="provincia" value="{{ cliente[4] or '' }}">
+
+    <label for="comune">Comune:</label>
+    <input type="text" id="comune" name="comune" value="{{ cliente[5] or '' }}">
+
+    <label for="codice_fiscale">Codice fiscale:</label>
+    <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ cliente[6] or '' }}">
+
+    <label for="telefono">Telefono:</label>
+    <input type="text" id="telefono" name="telefono" value="{{ cliente[7] or '' }}">
+
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" value="{{ cliente[8] or '' }}">
+
+    <button type="submit">💾 Salva modifiche</button>
+</form>
+
+<div style="text-align:center; margin-top:20px;">
+    <a class="button" href="/clienti">🔙 Torna alla lista clienti</a>
+</div>
+{% endblock %}

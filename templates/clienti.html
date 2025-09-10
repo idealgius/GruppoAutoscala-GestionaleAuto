@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Lista Clienti{% endblock %}
+
+{% block content %}
+<h1>👥 Lista Clienti Registrati</h1>
+
+<!-- Pulsante allineato come in vetture -->
+<div style="margin-bottom:20px;">
+    <a href="/inserisci_cliente" class="button">➕ Inserisci Nuovo Cliente</a>
+</div>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Cognome</th>
+            <th>Data di nascita</th>
+            <th>Provincia</th>
+            <th>Comune</th>
+            <th>Codice fiscale</th>
+            <th>Telefono</th>
+            <th>Email</th>
+            <th>Azioni</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% if clienti %}
+            {% for cliente in clienti %}
+            <tr>
+                <td>{{ cliente[0] or '' }}</td>
+                <td>{{ cliente[1] or '' }}</td>
+                <td>{{ cliente[2] or '' }}</td>
+                <td>{{ cliente[3] or '' }}</td>
+                <td>{{ cliente[4] or '' }}</td>
+                <td>{{ cliente[5] or '' }}</td>
+                <td>{{ cliente[6] or '' }}</td>
+                <td>{{ cliente[7] or '' }}</td>
+                <td>{{ cliente[8] or '' }}</td>
+                <td class="action-buttons">
+                    <a href="/modifica_cliente/{{ cliente[0] }}" class="modifica">✏️ Modifica</a>
+                    <a href="/elimina_cliente/{{ cliente[0] }}" class="elimina"
+                       onclick="return confirm('Sei sicuro di voler eliminare questo cliente?');">🗑️ Elimina</a>
+                </td>
+            </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="10" style="text-align:center;">Nessun cliente registrato.</td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>
+{% endblock %}
