@@ -43,12 +43,16 @@
     </header>
 
     <nav>
-        {% if session.get('user_id') %}
+        {% if session.get('username') %}
             <a href="{{ url_for('lista_clienti') }}">👥 Clienti</a>
             <a href="{{ url_for('inserisci_cliente') }}">➕ Inserisci Cliente</a>
             <a href="{{ url_for('lista_vetture') }}">🚗 Vetture</a>
             <a href="{{ url_for('inserisci_vettura') }}">➕ Inserisci Vettura</a>
+            <a href="{{ url_for('lista_modelli') }}">🛠️ Modelli</a>
+            <a href="{{ url_for('lista_ricambi') }}">🔧 Ricambi</a>
             <a href="{{ url_for('logout') }}">🔒 Logout ({{ session['username'] }})</a>
+        {% else %}
+            <a href="{{ url_for('login') }}">🔑 Login</a>
         {% endif %}
     </nav>
 

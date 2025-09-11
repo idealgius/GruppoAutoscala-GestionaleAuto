@@ -21,29 +21,35 @@
     </tr>
   </thead>
   <tbody>
-    {% for r in ricambi %}
-    <tr>
-      <td>{{ r['id'] }}</td>
-      <td>{{ r['nome'] }}</td>
-      <td>{{ r['codice'] }}</td>
-      <td>
-        {{ r['quantita'] }}
-        {% if r['quantita'] <= 2 %}
-          {% if r['quantita'] == 0 %}
-            <span style="color:red; font-weight:bold;">❌ Esaurito</span>
-          {% elif r['quantita'] == 1 %}
-            <span style="color:orange; font-weight:bold;">⚠️ Solo 1 rimasto</span>
-          {% else %}
-            <span style="color:orange; font-weight:bold;">⚠️ Giacenza bassa</span>
+    {% if ricambi %}
+      {% for r in ricambi %}
+      <tr>
+        <td>{{ r['id'] }}</td>
+        <td>{{ r['nome'] }}</td>
+        <td>{{ r['codice'] }}</td>
+        <td>
+          {{ r['quantita'] }}
+          {% if r['quantita'] <= 2 %}
+            {% if r['quantita'] == 0 %}
+              <span style="color:red; font-weight:bold;">❌ Esaurito</span>
+            {% elif r['quantita'] == 1 %}
+              <span style="color:orange; font-weight:bold;">⚠️ Solo 1 rimasto</span>
+            {% else %}
+              <span style="color:orange; font-weight:bold;">⚠️ Giacenza bassa</span>
+            {% endif %}
           {% endif %}
-        {% endif %}
-      </td>
-      <td class="action-buttons">
-        <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica">✏️ Modifica</a>
-        <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina" onclick="return confirm('Eliminare questo ricambio?')">🗑️ Elimina</a>
-      </td>
-    </tr>
-    {% endfor %}
+        </td>
+        <td class="action-buttons">
+          <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica">✏️ Modifica</a>
+          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina" onclick="return confirm('Eliminare questo ricambio?')">🗑️ Elimina</a>
+        </td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="5" style="text-align:center;">Nessun ricambio registrato.</td>
+      </tr>
+    {% endif %}
   </tbody>
 </table>
 {% endblock %}

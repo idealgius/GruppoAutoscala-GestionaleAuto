@@ -14,7 +14,7 @@
 </p>
 
 <!-- Pannello di accesso rapido alle sezioni (visibile solo se loggato) -->
-{% if session.user_id %}
+{% if session.get('user_id') %}
 <div style="display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin-top:20px;">
     <a class="button" href="/clienti">👥 Gestisci Clienti</a>
     <a class="button" href="/inserisci_cliente">➕ Inserisci Cliente</a>

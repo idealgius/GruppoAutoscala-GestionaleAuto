@@ -1,122 +1,59 @@
 from flask import Flask, render_template, request, redirect, session, url_for, flash
+import sqlite3
 from functools import wraps
 import hashlib
-import os
+import os  # per rendere il percorso dei template dinamico
 import re
-import psycopg2
-import psycopg2.extras
 
-# ----- Row adapter per compatibilità (accesso sia per indice che per nome) -----
-class RowAdapter:
-    def __init__(self, row_dict, columns):
-        """
-        row_dict: dict-like mapping column->value (es. from RealDictCursor)
-        columns: ordered list of column names (so row[0] works)
-        """
-        self._data = row_dict or {}
-        self._cols = columns or []
-
-    def __getitem__(self, key):
-        # support integer index
-        if isinstance(key, int):
-            if 0 <= key < len(self._cols):
-                return self._data.get(self._cols[key])
-            raise IndexError("RowAdapter index out of range")
-        # support string key
-        return self._data.get(key)
-
-    def get(self, key, default=None):
-        return self._data.get(key, default)
-
-    def keys(self):
-        return self._data.keys()
-
-    def items(self):
-        return self._data.items()
-
-    def __repr__(self):
-        return f"<RowAdapter {self._data}>"
-
-# ----- DB wrapper per PostgreSQL (mantiene compatibilità con l'uso attuale di '?' e ':name') -----
+# ----- DB wrapper per compatibilità SQLite <-> PostgreSQL -----
+# Questo wrapper permette a tutto il resto del codice di continuare
+# a chiamare conn.execute(...).fetchone()/fetchall(), conn.commit(), conn.close()
+# senza dover cambiare la logica esistente.
 class CursorWrapper:
     def __init__(self, cursor):
         self._cursor = cursor
-        # Save column order from description (may be None if no result)
-        desc = getattr(cursor, "description", None)
-        if desc:
-            self._columns = [d[0] for d in desc]
-        else:
-            self._columns = []
 
     def fetchone(self):
-        row = self._cursor.fetchone()
-        if row is None:
-            return None
-        # If it's a dict-like (RealDictCursor), convert to RowAdapter preserving order
-        if isinstance(row, dict):
-            return RowAdapter(row, self._columns)
-        # If it's a sequence (tuple), convert to dict using columns
-        if isinstance(row, (list, tuple)):
-            d = {self._columns[i]: row[i] for i in range(len(self._columns))}
-            return RowAdapter(d, self._columns)
-        # Fallback: try to cast to dict
-        try:
-            d = dict(row)
-            return RowAdapter(d, self._columns)
-        except Exception:
-            return row
+        return self._cursor.fetchone()
 
     def fetchall(self):
-        rows = self._cursor.fetchall()
-        if rows is None:
-            return []
-        adapted = []
-        for row in rows:
-            if isinstance(row, dict):
-                adapted.append(RowAdapter(row, self._columns))
-            elif isinstance(row, (list, tuple)):
-                d = {self._columns[i]: row[i] for i in range(len(self._columns))}
-                adapted.append(RowAdapter(d, self._columns))
-            else:
-                try:
-                    d = dict(row)
-                    adapted.append(RowAdapter(d, self._columns))
-                except Exception:
-                    adapted.append(row)
-        return adapted
+        return self._cursor.fetchall()
 
     def __getattr__(self, name):
         return getattr(self._cursor, name)
 
 
 class DBConn:
-    def __init__(self, raw_conn):
+    def __init__(self, raw_conn, kind):
         self._conn = raw_conn
+        self.kind = kind  # 'sqlite' o 'pg'
 
     def execute(self, query, params=()):
-        """
-        Support two parameter styles:
-         - Named params with :name  (converted to %(name)s)
-         - Positional with ?        (converted to %s)
-        Works with dict or sequence params.
-        """
-        cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        # Named parameters :name -> %(name)s
-        if isinstance(params, dict):
-            q = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', query)
-            cur.execute(q, params)
+        # Se PostgreSQL dobbiamo adattare i placeholder:
+        # - query con parametri posizionali: ? -> %s
+        # - query con parametri named :name -> %(name)s
+        if self.kind == 'sqlite':
+            # sqlite3 accepts both tuples and dicts for parameters
+            return self._conn.execute(query, params)
         else:
-            # positional params: replace '?' with '%s' (only for convenience)
-            if '?' in query:
-                q = query.replace('?', '%s')
-            else:
-                q = query
-            if isinstance(params, (list, tuple)):
+            # Postgres (psycopg2)
+            import psycopg2.extras  # import locale per sicurezza
+            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            # Se params è una mapping (dict-like) usiamo conversione :name -> %(name)s
+            if isinstance(params, dict):
+                q = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', query)
                 cur.execute(q, params)
             else:
-                # single scalar param
-                cur.execute(q, (params,))
-        return CursorWrapper(cur)
+                # params è tupla/list oppure singolo valore: converti ? -> %s
+                # Nota: semplice replace; sufficiente per il nostro SQL attuale
+                q = query.replace('?', '%s')
+                # Se params è un singolo valore (non sequenza), psycopg2 vuole una tupla
+                if isinstance(params, (list, tuple)):
+                    cur.execute(q, params)
+                else:
+                    cur.execute(q, (params,))
+            return CursorWrapper(cur)
 
     def commit(self):
         return self._conn.commit()
@@ -137,55 +74,42 @@ NOMI_REAL = {
     "G.AS_Giuseppe.Palladino": "Giuseppe Palladino"
 }
 
-# ---------- Connessione DB (solo PostgreSQL) ----------
+# ---------- Connessione DB ----------
 def get_db():
     """
-    Costruisce la stringa di connessione PostgreSQL in questo ordine di priorità:
-    1) DATABASE_URL (es. postgres://user:pass@host:port/dbname)
-    2) POSTGRES_USER + POSTGRES_PASSWORD (opzionali) + POSTGRES_DB (default gestionaleauto_gruppoautoscala)
-       + POSTGRES_HOST (default localhost) + POSTGRES_PORT (default 5432)
-    Se non trova credenziali sufficienti, solleva un errore chiaro.
+    Restituisce un oggetto DBConn che espone execute(...).fetchone()/fetchall(),
+    commit() e close(). Sceglie PostgreSQL se è definita la variabile d'ambiente
+    DATABASE_URL (ad es. fornita da Render), altrimenti usa SQLite locale.
     """
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
-        # preferiamo la variabile pronta
+        # Connessione a PostgreSQL
+        import psycopg2
+        # psycopg2.extras.RealDictCursor verrà usato nella classe DBConn
         conn = psycopg2.connect(db_url, sslmode="require")
-        return DBConn(conn)
-
-    # altrimenti compone dalla singole variabili (più comodo per sviluppo)
-    pg_user = os.environ.get("POSTGRES_USER")
-    pg_password = os.environ.get("POSTGRES_PASSWORD")
-    pg_db = os.environ.get("POSTGRES_DB", "gestionaleauto_gruppoautoscala")
-    pg_host = os.environ.get("POSTGRES_HOST", "localhost")
-    pg_port = os.environ.get("POSTGRES_PORT", "5432")
-
-    if pg_user and pg_password:
-        conn_str = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
-        conn = psycopg2.connect(conn_str, sslmode="require")
-        return DBConn(conn)
-
-    # altrimenti errore esplicito (così non proseguiamo in errore silenzioso)
-    raise RuntimeError(
-        "Variabile DATABASE_URL non impostata e POSTGRES_USER/POSTGRES_PASSWORD non fornite.\n"
-        "Imposta DATABASE_URL (es. 'postgresql://user:pass@host:port/dbname') oppure\n"
-        "imposta POSTGRES_USER e POSTGRES_PASSWORD e (opz.) POSTGRES_DB, POSTGRES_HOST, POSTGRES_PORT."
-    )
+        return DBConn(conn, "pg")
+    else:
+        # Connessione a SQLite (fallback locale)
+        conn = sqlite3.connect("concessionaria.db", check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return DBConn(conn, "sqlite")
 
 
 # ---------- Assicura colonna "quantita" in ricambi ----------
-# Questo codice tenta di aggiungere la colonna (se non esiste) ma non interrompe l'app in caso di errore.
+# Manteniamo la stessa logica: tentiamo di aggiungere la colonna e proseguiamo in caso di errore
+conn = get_db()
 try:
-    tmp_conn = get_db()
-    tmp_conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
-    tmp_conn.commit()
+    # Nota: per PostgreSQL le query usano la conversione dei placeholder dentro DBConn
+    conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
+    conn.commit()
 except Exception:
+    # se la colonna esiste o altro errore, ignoriamo (stessa logica originale)
     pass
 finally:
     try:
-        tmp_conn.close()
+        conn.close()
     except Exception:
         pass
-
 
 # ---------- Decoratore protezione ----------
 def login_required(f):
@@ -252,15 +176,11 @@ def logout():
 
 # ---------- HOME ----------
 @app.route("/")
+@login_required
 def home():
-    if "user_id" not in session:
-        # Se l'utente non è loggato, vai al login
-        return redirect(url_for("login"))
-
     username = session.get("username")
     nome_reale = NOMI_REAL.get(username, username)
-    mostra_menu = True
-    return render_template("home.html", nome_reale=nome_reale, mostra_menu=mostra_menu)
+    return render_template("home.html", nome_reale=nome_reale)
 
 # =========================
 #          CLIENTI
@@ -585,6 +505,7 @@ def salva_ricambio():
         conn.commit()
         flash("✅ Ricambio salvato correttamente")
     except Exception:
+        # sqlite3.IntegrityError -> psycopg2.IntegrityError; manteniamo comportamento generico
         flash("❌ Codice ricambio già esistente")
     finally:
         conn.close()
