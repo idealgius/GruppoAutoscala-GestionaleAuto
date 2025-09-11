@@ -5,10 +5,10 @@ import hashlib
 import os  # per rendere il percorso dei template dinamico
 import re
 
+# --- AGGIUNTA DEBUG DATABASE_URL ---
+print("DATABASE_URL =", os.environ.get("DATABASE_URL"))
+
 # ----- DB wrapper per compatibilità SQLite <-> PostgreSQL -----
-# Questo wrapper permette a tutto il resto del codice di continuare
-# a chiamare conn.execute(...).fetchone()/fetchall(), conn.commit(), conn.close()
-# senza dover cambiare la logica esistente.
 class CursorWrapper:
     def __init__(self, cursor):
         self._cursor = cursor
@@ -29,26 +29,16 @@ class DBConn:
         self.kind = kind  # 'sqlite' o 'pg'
 
     def execute(self, query, params=()):
-        # Se PostgreSQL dobbiamo adattare i placeholder:
-        # - query con parametri posizionali: ? -> %s
-        # - query con parametri named :name -> %(name)s
         if self.kind == 'sqlite':
-            # sqlite3 accepts both tuples and dicts for parameters
             return self._conn.execute(query, params)
         else:
-            # Postgres (psycopg2)
-            import psycopg2.extras  # import locale per sicurezza
+            import psycopg2.extras
             cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-            # Se params è una mapping (dict-like) usiamo conversione :name -> %(name)s
             if isinstance(params, dict):
                 q = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', query)
                 cur.execute(q, params)
             else:
-                # params è tupla/list oppure singolo valore: converti ? -> %s
-                # Nota: semplice replace; sufficiente per il nostro SQL attuale
                 q = query.replace('?', '%s')
-                # Se params è un singolo valore (non sequenza), psycopg2 vuole una tupla
                 if isinstance(params, (list, tuple)):
                     cur.execute(q, params)
                 else:
@@ -76,40 +66,30 @@ NOMI_REAL = {
 
 # ---------- Connessione DB ----------
 def get_db():
-    """
-    Restituisce un oggetto DBConn che espone execute(...).fetchone()/fetchall(),
-    commit() e close(). Sceglie PostgreSQL se è definita la variabile d'ambiente
-    DATABASE_URL (ad es. fornita da Render), altrimenti usa SQLite locale.
-    """
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
-        # Connessione a PostgreSQL
         import psycopg2
-        # psycopg2.extras.RealDictCursor verrà usato nella classe DBConn
         conn = psycopg2.connect(db_url, sslmode="require")
         return DBConn(conn, "pg")
     else:
-        # Connessione a SQLite (fallback locale)
         conn = sqlite3.connect("concessionaria.db", check_same_thread=False)
         conn.row_factory = sqlite3.Row
         return DBConn(conn, "sqlite")
 
 
 # ---------- Assicura colonna "quantita" in ricambi ----------
-# Manteniamo la stessa logica: tentiamo di aggiungere la colonna e proseguiamo in caso di errore
 conn = get_db()
 try:
-    # Nota: per PostgreSQL le query usano la conversione dei placeholder dentro DBConn
     conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
     conn.commit()
 except Exception:
-    # se la colonna esiste o altro errore, ignoriamo (stessa logica originale)
     pass
 finally:
     try:
         conn.close()
     except Exception:
         pass
+
 
 # ---------- Decoratore protezione ----------
 def login_required(f):
@@ -119,6 +99,7 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated_function
+
 
 # ---------- Funzione helper per scalare giacenza ----------
 def scalo_ricambio(ricambio_id):
@@ -143,6 +124,7 @@ def scalo_ricambio(ricambio_id):
         elif quantita == 0:
             flash(f"❌ {nome} esaurito!")
 
+
 # ---------- LOGIN/LOGOUT ----------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -150,14 +132,12 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
         hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-
         conn = get_db()
         user = conn.execute(
             "SELECT id FROM utenti WHERE username=? AND password=?",
             (username, hashed_pw)
         ).fetchone()
         conn.close()
-
         if user:
             session["user_id"] = user["id"]
             session["username"] = username
@@ -167,12 +147,14 @@ def login():
         return redirect(url_for("login"))
     return render_template("login.html")
 
+
 @app.route("/logout")
 @login_required
 def logout():
     session.clear()
     flash("Logout effettuato correttamente")
     return redirect(url_for("login"))
+
 
 # ---------- HOME ----------
 @app.route("/")
@@ -182,6 +164,7 @@ def home():
     nome_reale = NOMI_REAL.get(username, username)
     return render_template("home.html", nome_reale=nome_reale)
 
+
 # =========================
 #          CLIENTI
 # =========================
@@ -189,6 +172,7 @@ def home():
 @login_required
 def inserisci_cliente():
     return render_template("inserisci_cliente.html")
+
 
 @app.route("/salva_cliente", methods=["POST"])
 @login_required
@@ -208,6 +192,7 @@ def salva_cliente():
     flash("✅ Cliente salvato correttamente")
     return redirect(url_for("lista_clienti"))
 
+
 @app.route("/clienti")
 @login_required
 def lista_clienti():
@@ -218,6 +203,7 @@ def lista_clienti():
     ).fetchall()
     conn.close()
     return render_template("clienti.html", clienti=clienti)
+
 
 @app.route("/modifica_cliente/<int:id>")
 @login_required
@@ -231,6 +217,7 @@ def modifica_cliente(id):
         return render_template("modifica_cliente.html", cliente=cliente)
     flash(f"❌ Cliente ID {id} non trovato o non accessibile")
     return redirect(url_for("lista_clienti"))
+
 
 @app.route("/aggiorna_cliente/<int:id>", methods=["POST"])
 @login_required
@@ -253,6 +240,7 @@ def aggiorna_cliente(id):
     flash("✅ Cliente aggiornato correttamente")
     return redirect(url_for("lista_clienti"))
 
+
 @app.route("/elimina_cliente/<int:id>")
 @login_required
 def elimina_cliente(id):
@@ -271,6 +259,7 @@ def elimina_cliente(id):
     flash("✅ Cliente eliminato")
     return redirect(url_for("lista_clienti"))
 
+
 # =========================
 #          VETTURE
 # =========================
@@ -284,6 +273,7 @@ def inserisci_vettura():
     ).fetchall()
     conn.close()
     return render_template("inserisci_vettura.html", clienti=clienti)
+
 
 @app.route("/salva_vettura", methods=["POST"])
 @login_required
@@ -306,6 +296,7 @@ def salva_vettura():
     flash("✅ Vettura salvata correttamente")
     return redirect(url_for("lista_vetture"))
 
+
 @app.route("/vetture")
 @login_required
 def lista_vetture():
@@ -320,6 +311,7 @@ def lista_vetture():
     """, (session["user_id"],)).fetchall()
     conn.close()
     return render_template("vetture.html", vetture=vetture)
+
 
 @app.route("/modifica_vettura/<int:id>")
 @login_required
@@ -337,6 +329,7 @@ def modifica_vettura(id):
         return render_template("modifica_vettura.html", vettura=vettura, clienti=clienti)
     flash(f"❌ Vettura ID {id} non trovata o non accessibile")
     return redirect(url_for("lista_vetture"))
+
 
 @app.route("/aggiorna_vettura/<int:id>", methods=["POST"])
 @login_required
@@ -362,6 +355,7 @@ def aggiorna_vettura(id):
     flash("✅ Vettura aggiornata correttamente")
     return redirect(url_for("lista_vetture"))
 
+
 @app.route("/elimina_vettura/<int:id>")
 @login_required
 def elimina_vettura(id):
@@ -371,7 +365,6 @@ def elimina_vettura(id):
     conn.close()
     flash("✅ Vettura eliminata correttamente")
     return redirect(url_for("lista_vetture"))
-
 # =========================
 #          MODELLI
 # =========================
@@ -388,10 +381,12 @@ def lista_modelli():
     conn.close()
     return render_template("modelli.html", modelli=modelli)
 
+
 @app.route("/inserisci_modello")
 @login_required
 def inserisci_modello():
     return render_template("inserisci_modello.html")
+
 
 @app.route("/salva_modello", methods=["POST"])
 @login_required
@@ -410,6 +405,7 @@ def salva_modello():
     flash("✅ Modello salvato correttamente")
     return redirect(url_for("lista_modelli"))
 
+
 @app.route("/modifica_modello/<int:id>")
 @login_required
 def modifica_modello(id):
@@ -420,6 +416,7 @@ def modifica_modello(id):
         return render_template("modifica_modello.html", modello=modello)
     flash(f"❌ Modello ID {id} non trovato o non accessibile")
     return redirect(url_for("lista_modelli"))
+
 
 @app.route("/aggiorna_modello/<int:id>", methods=["POST"])
 @login_required
@@ -441,6 +438,7 @@ def aggiorna_modello(id):
     flash("✅ Modello aggiornato correttamente")
     return redirect(url_for("lista_modelli"))
 
+
 @app.route("/elimina_modello/<int:id>")
 @login_required
 def elimina_modello(id):
@@ -461,6 +459,7 @@ def elimina_modello(id):
     flash("✅ Modello eliminato correttamente")
     return redirect(url_for("lista_modelli"))
 
+
 # =========================
 #          RICAMBI
 # =========================
@@ -477,10 +476,12 @@ def lista_ricambi():
     conn.close()
     return render_template("ricambi.html", ricambi=ricambi)
 
+
 @app.route("/inserisci_ricambio")
 @login_required
 def inserisci_ricambio():
     return render_template("inserisci_ricambio.html")
+
 
 @app.route("/salva_ricambio", methods=["POST"])
 @login_required
@@ -505,11 +506,11 @@ def salva_ricambio():
         conn.commit()
         flash("✅ Ricambio salvato correttamente")
     except Exception:
-        # sqlite3.IntegrityError -> psycopg2.IntegrityError; manteniamo comportamento generico
         flash("❌ Codice ricambio già esistente")
     finally:
         conn.close()
     return redirect(url_for("lista_ricambi"))
+
 
 @app.route("/modifica_ricambio/<int:id>")
 @login_required
@@ -523,6 +524,7 @@ def modifica_ricambio(id):
         return render_template("modifica_ricambio.html", ricambio=ricambio)
     flash("❌ Ricambio non trovato o non accessibile")
     return redirect(url_for("lista_ricambi"))
+
 
 @app.route("/aggiorna_ricambio/<int:id>", methods=["POST"])
 @login_required
@@ -550,6 +552,7 @@ def aggiorna_ricambio(id):
         conn.close()
     return redirect(url_for("lista_ricambi"))
 
+
 @app.route("/elimina_ricambio/<int:id>")
 @login_required
 def elimina_ricambio(id):
@@ -570,6 +573,7 @@ def elimina_ricambio(id):
     conn.close()
     flash("✅ Ricambio eliminato")
     return redirect(url_for("lista_ricambi"))
+
 
 # =========================
 #   ASSOCIAZIONI MODELLO↔RICAMBI
@@ -613,6 +617,7 @@ def ricambi_del_modello(modello_id):
         non_associati=non_associati
     )
 
+
 @app.route("/modello/<int:modello_id>/aggiungi_ricambio", methods=["POST"])
 @login_required
 def aggiungi_ricambio_a_modello(modello_id):
@@ -638,6 +643,7 @@ def aggiungi_ricambio_a_modello(modello_id):
         conn.close()
     return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
 
+
 @app.route("/modello/<int:modello_id>/rimuovi_ricambio/<int:ricambio_id>")
 @login_required
 def rimuovi_ricambio_da_modello(modello_id, ricambio_id):
@@ -657,6 +663,7 @@ def rimuovi_ricambio_da_modello(modello_id, ricambio_id):
     conn.close()
     flash("✅ Associazione rimossa")
     return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
+
 
 # ---------- Avvio server ----------
 if __name__ == "__main__":
