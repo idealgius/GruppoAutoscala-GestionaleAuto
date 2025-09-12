@@ -2,10 +2,10 @@ from flask import Flask, render_template, request, redirect, session, url_for, f
 import sqlite3
 from functools import wraps
 import hashlib
-import os  # per rendere il percorso dei template dinamico
+import os
 import re
 
-# --- AGGIUNTA DEBUG DATABASE_URL ---
+# --- DEBUG DATABASE_URL ---
 print("DATABASE_URL =", os.environ.get("DATABASE_URL"))
 
 # ----- DB wrapper per compatibilità SQLite <-> PostgreSQL -----
@@ -204,7 +204,6 @@ def lista_clienti():
     conn.close()
     return render_template("clienti.html", clienti=clienti)
 
-
 @app.route("/modifica_cliente/<int:id>")
 @login_required
 def modifica_cliente(id):
@@ -217,6 +216,7 @@ def modifica_cliente(id):
         return render_template("modifica_cliente.html", cliente=cliente)
     flash(f"❌ Cliente ID {id} non trovato o non accessibile")
     return redirect(url_for("lista_clienti"))
+
 
 @app.route("/aggiorna_cliente/<int:id>", methods=["POST"])
 @login_required
@@ -257,8 +257,6 @@ def elimina_cliente(id):
     conn.close()
     flash("✅ Cliente eliminato")
     return redirect(url_for("lista_clienti"))
-
-
 # =========================
 #          VETTURE
 # =========================
@@ -294,6 +292,8 @@ def salva_vettura():
     conn.close()
     flash("✅ Vettura salvata correttamente")
     return redirect(url_for("lista_vetture"))
+
+
 @app.route("/vetture")
 @login_required
 def lista_vetture():
@@ -457,34 +457,33 @@ def elimina_modello(id):
     conn.close()
     flash("✅ Modello eliminato correttamente")
     return redirect(url_for("lista_modelli"))
-
-
 # =========================
-#          RICAMBI (Migliorati)
+#          RICAMBI
 # =========================
 @app.route("/ricambi", methods=["GET", "POST"])
 @login_required
 def lista_ricambi():
     conn = get_db()
     filtro_prefisso = request.values.get("prefisso", "").strip().upper()
-    ricerca = request.values.get("ricerca", "").strip().upper()
+    ricerca = request.values.get("q", "").strip().upper()  # cambiato da 'ricerca' a 'q' per uniformità con il form
 
     query_base = "SELECT id, nome, codice, quantita FROM ricambi WHERE utente_id=?"
     params = [session["user_id"]]
 
     if filtro_prefisso:
-        query_base += " AND nome LIKE ?"
+        query_base += " AND codice LIKE ?"
         params.append(f"{filtro_prefisso}%")
     if ricerca:
+        # Ricerca per inizio codice o ultime 4 cifre
         query_base += " AND (codice LIKE ? OR codice LIKE ?)"
-        params.extend([f"{ricerca}%", f"%{ricerca[-4:]}" if len(ricerca) >= 4 else f"{ricerca}%"])
+        last_chars = ricerca[-4:] if len(ricerca) >= 4 else ricerca
+        params.extend([f"{ricerca}%", f"%{last_chars}"])
 
     query_base += " ORDER BY nome"
 
     ricambi = conn.execute(query_base, tuple(params)).fetchall()
     conn.close()
 
-    # Evidenzia ricerca
     def highlight(text):
         if ricerca and ricerca.upper() in text.upper():
             idx = text.upper().find(ricerca.upper())
@@ -594,8 +593,6 @@ def elimina_ricambio(id):
     conn.close()
     flash("✅ Ricambio eliminato")
     return redirect(url_for("lista_ricambi"))
-
-
 # =========================
 #   ASSOCIAZIONI MODELLO↔RICAMBI
 # =========================

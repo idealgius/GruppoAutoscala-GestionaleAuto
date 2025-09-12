@@ -5,20 +5,18 @@
 {% block content %}
 <h1>🔧 Elenco Ricambi</h1>
 
-<!-- Filtro prefisso (facoltativo) -->
-<form method="GET" action="/ricambi" style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+<!-- Filtro prefisso e barra di ricerca in un unico form -->
+<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
   <select name="prefisso" style="padding:6px; min-width:180px;">
     <option value="">-- Filtra per prefisso (facoltativo) --</option>
-    <option value="BH" {% if request.args.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
-    <option value="MM" {% if request.args.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
+    <option value="BH" {% if filtro_prefisso == 'BH' %}selected{% endif %}>BH</option>
+    <option value="MM" {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
   </select>
-  <button type="submit" class="button" style="padding:6px 12px;">📌 Filtra</button>
-</form>
-
-<!-- Barra di ricerca per codice o ultime cifre -->
-<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
-    <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ request.args.get('q', '') }}" style="flex:1; padding:6px;">
-    <button type="submit" class="button" style="padding:6px 12px;">🔍 Cerca</button>
+  <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ ricerca }}" style="flex:1; padding:6px;">
+  <button type="submit" class="button" style="padding:6px 12px;">🔍 Applica</button>
+  {% if ricerca or filtro_prefisso %}
+  <a href="/ricambi" class="button" style="padding:6px 12px; background-color:#ccc;">🔄 Reset</a>
+  {% endif %}
 </form>
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap;">
@@ -38,24 +36,19 @@
   <tbody>
     {% if ricambi %}
       {% for r in ricambi %}
-      <tr {% if request.args.get('q') and request.args.get('q').lower() in r['codice'].lower() %} style="background-color:#ffff99;" {% endif %}>
+      <tr>
         <td>{{ r['id'] }}</td>
-        <td>{{ r['nome'] }}</td>
-        <td>
-            {{ r['codice'] }}
-            {% if r.get('collegato_a') %}
-              <span style="color:blue; font-weight:bold;">🔗 collegato a {{ r['collegato_a'] }}</span>
-            {% endif %}
-        </td>
+        <td>{{ r['nome']|safe }}</td>
+        <td>{{ r['codice']|safe }}</td>
         <td>
           {{ r['quantita'] }}
           {% if r['quantita'] <= 2 %}
             {% if r['quantita'] == 0 %}
-              <span style="color:red; font-weight:bold;">❌ Esaurito</span>
+              <span class="badge danger">❌ Esaurito</span>
             {% elif r['quantita'] == 1 %}
-              <span style="color:orange; font-weight:bold;">⚠️ Solo 1 rimasto</span>
+              <span class="badge warning">⚠️ Solo 1 rimasto</span>
             {% else %}
-              <span style="color:orange; font-weight:bold;">⚠️ Giacenza bassa</span>
+              <span class="badge low-stock">⚠️ Giacenza bassa</span>
             {% endif %}
           {% endif %}
         </td>
@@ -67,9 +60,16 @@
       {% endfor %}
     {% else %}
       <tr>
-        <td colspan="5" style="text-align:center;">Nessun ricambio registrato.</td>
+        <td colspan="5" style="text-align:center; color:red;">Il codice che stai cercando non è presente.</td>
       </tr>
     {% endif %}
   </tbody>
 </table>
+
+<style>
+.badge.danger { color: red; font-weight: bold; }
+.badge.warning { color: orange; font-weight: bold; }
+.badge.low-stock { color: darkorange; font-weight: bold; }
+.action-buttons a { margin-right:8px; text-decoration:none; }
+</style>
 {% endblock %}
