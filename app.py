@@ -77,15 +77,29 @@ def get_db():
         return DBConn(conn, "sqlite")
 
 
-# ---------- Assicura colonna "quantita" in ricambi ----------
+# ---------- Assicura colonna "quantita" in ricambi e tabella codici_alternativi ----------
 conn = get_db()
 try:
     conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
-    conn.commit()
+except Exception:
+    pass
+
+# Creazione tabella codici alternativi se non esiste
+try:
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS codici_alternativi (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ricambio_id INTEGER NOT NULL,
+            codice TEXT NOT NULL,
+            utente_id INTEGER NOT NULL,
+            FOREIGN KEY (ricambio_id) REFERENCES ricambi(id)
+        )
+    """)
 except Exception:
     pass
 finally:
     try:
+        conn.commit()
         conn.close()
     except Exception:
         pass
@@ -191,8 +205,6 @@ def salva_cliente():
     conn.close()
     flash("✅ Cliente salvato correttamente")
     return redirect(url_for("lista_clienti"))
-
-
 @app.route("/clienti")
 @login_required
 def lista_clienti():
@@ -203,6 +215,7 @@ def lista_clienti():
     ).fetchall()
     conn.close()
     return render_template("clienti.html", clienti=clienti)
+
 
 @app.route("/modifica_cliente/<int:id>")
 @login_required
@@ -257,6 +270,8 @@ def elimina_cliente(id):
     conn.close()
     flash("✅ Cliente eliminato")
     return redirect(url_for("lista_clienti"))
+
+
 # =========================
 #          VETTURE
 # =========================
@@ -403,8 +418,6 @@ def salva_modello():
     conn.close()
     flash("✅ Modello salvato correttamente")
     return redirect(url_for("lista_modelli"))
-
-
 @app.route("/modifica_modello/<int:id>")
 @login_required
 def modifica_modello(id):
@@ -457,6 +470,8 @@ def elimina_modello(id):
     conn.close()
     flash("✅ Modello eliminato correttamente")
     return redirect(url_for("lista_modelli"))
+
+
 # =========================
 #          RICAMBI
 # =========================
@@ -465,7 +480,7 @@ def elimina_modello(id):
 def lista_ricambi():
     conn = get_db()
     filtro_prefisso = request.values.get("prefisso", "").strip().upper()
-    ricerca = request.values.get("q", "").strip().upper()  # cambiato da 'ricerca' a 'q' per uniformità con il form
+    ricerca = request.values.get("q", "").strip().upper()
 
     query_base = "SELECT id, nome, codice, quantita FROM ricambi WHERE utente_id=?"
     params = [session["user_id"]]
@@ -474,13 +489,11 @@ def lista_ricambi():
         query_base += " AND codice LIKE ?"
         params.append(f"{filtro_prefisso}%")
     if ricerca:
-        # Ricerca per inizio codice o ultime 4 cifre
-        query_base += " AND (codice LIKE ? OR codice LIKE ?)"
         last_chars = ricerca[-4:] if len(ricerca) >= 4 else ricerca
+        query_base += " AND (codice LIKE ? OR codice LIKE ?)"
         params.extend([f"{ricerca}%", f"%{last_chars}"])
 
     query_base += " ORDER BY nome"
-
     ricambi = conn.execute(query_base, tuple(params)).fetchall()
     conn.close()
 
@@ -593,6 +606,8 @@ def elimina_ricambio(id):
     conn.close()
     flash("✅ Ricambio eliminato")
     return redirect(url_for("lista_ricambi"))
+
+
 # =========================
 #   ASSOCIAZIONI MODELLO↔RICAMBI
 # =========================
