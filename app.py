@@ -218,7 +218,6 @@ def modifica_cliente(id):
     flash(f"❌ Cliente ID {id} non trovato o non accessibile")
     return redirect(url_for("lista_clienti"))
 
-
 @app.route("/aggiorna_cliente/<int:id>", methods=["POST"])
 @login_required
 def aggiorna_cliente(id):
@@ -295,8 +294,6 @@ def salva_vettura():
     conn.close()
     flash("✅ Vettura salvata correttamente")
     return redirect(url_for("lista_vetture"))
-
-
 @app.route("/vetture")
 @login_required
 def lista_vetture():
@@ -365,6 +362,8 @@ def elimina_vettura(id):
     conn.close()
     flash("✅ Vettura eliminata correttamente")
     return redirect(url_for("lista_vetture"))
+
+
 # =========================
 #          MODELLI
 # =========================
@@ -461,20 +460,42 @@ def elimina_modello(id):
 
 
 # =========================
-#          RICAMBI
+#          RICAMBI (Migliorati)
 # =========================
-@app.route("/ricambi")
+@app.route("/ricambi", methods=["GET", "POST"])
 @login_required
 def lista_ricambi():
     conn = get_db()
-    ricambi = conn.execute("""
-        SELECT id, nome, codice, quantita
-        FROM ricambi
-        WHERE utente_id=?
-        ORDER BY id DESC
-    """, (session["user_id"],)).fetchall()
+    filtro_prefisso = request.values.get("prefisso", "").strip().upper()
+    ricerca = request.values.get("ricerca", "").strip().upper()
+
+    query_base = "SELECT id, nome, codice, quantita FROM ricambi WHERE utente_id=?"
+    params = [session["user_id"]]
+
+    if filtro_prefisso:
+        query_base += " AND nome LIKE ?"
+        params.append(f"{filtro_prefisso}%")
+    if ricerca:
+        query_base += " AND (codice LIKE ? OR codice LIKE ?)"
+        params.extend([f"{ricerca}%", f"%{ricerca[-4:]}" if len(ricerca) >= 4 else f"{ricerca}%"])
+
+    query_base += " ORDER BY nome"
+
+    ricambi = conn.execute(query_base, tuple(params)).fetchall()
     conn.close()
-    return render_template("ricambi.html", ricambi=ricambi)
+
+    # Evidenzia ricerca
+    def highlight(text):
+        if ricerca and ricerca.upper() in text.upper():
+            idx = text.upper().find(ricerca.upper())
+            return text[:idx] + "<mark>" + text[idx:idx+len(ricerca)] + "</mark>" + text[idx+len(ricerca):]
+        return text
+
+    for r in ricambi:
+        r["nome"] = highlight(r["nome"])
+        r["codice"] = highlight(r["codice"])
+
+    return render_template("ricambi.html", ricambi=ricambi, filtro_prefisso=filtro_prefisso, ricerca=ricerca)
 
 
 @app.route("/inserisci_ricambio")

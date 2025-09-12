@@ -5,15 +5,24 @@
 {% block content %}
 <h1>🔧 Elenco Ricambi</h1>
 
-<!-- Barra di ricerca -->
-<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; gap:8px;">
-    <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." style="flex:1; padding:6px;">
-    <button type="submit" class="button">🔍 Cerca</button>
+<!-- Filtro prefisso (facoltativo) -->
+<form method="GET" action="/ricambi" style="margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+  <select name="prefisso" style="padding:6px; min-width:180px;">
+    <option value="">-- Filtra per prefisso (facoltativo) --</option>
+    <option value="BH" {% if request.args.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
+    <option value="MM" {% if request.args.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
+  </select>
+  <button type="submit" class="button" style="padding:6px 12px;">📌 Filtra</button>
+</form>
+
+<!-- Barra di ricerca per codice o ultime cifre -->
+<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+    <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ request.args.get('q', '') }}" style="flex:1; padding:6px;">
+    <button type="submit" class="button" style="padding:6px 12px;">🔍 Cerca</button>
 </form>
 
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap;">
   <a href="/inserisci_ricambio" class="button">➕ Inserisci Ricambio</a>
-  <div style="color:#666; font-size:0.95em;">Codici unici per utente</div>
 </div>
 
 <table>
@@ -29,7 +38,7 @@
   <tbody>
     {% if ricambi %}
       {% for r in ricambi %}
-      <tr>
+      <tr {% if request.args.get('q') and request.args.get('q').lower() in r['codice'].lower() %} style="background-color:#ffff99;" {% endif %}>
         <td>{{ r['id'] }}</td>
         <td>{{ r['nome'] }}</td>
         <td>
