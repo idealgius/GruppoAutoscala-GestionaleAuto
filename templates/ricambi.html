@@ -5,6 +5,12 @@
 {% block content %}
 <h1>🔧 Elenco Ricambi</h1>
 
+<!-- Barra di ricerca -->
+<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; gap:8px;">
+    <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." style="flex:1; padding:6px;">
+    <button type="submit" class="button">🔍 Cerca</button>
+</form>
+
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap;">
   <a href="/inserisci_ricambio" class="button">➕ Inserisci Ricambio</a>
   <div style="color:#666; font-size:0.95em;">Codici unici per utente</div>
@@ -26,7 +32,12 @@
       <tr>
         <td>{{ r['id'] }}</td>
         <td>{{ r['nome'] }}</td>
-        <td>{{ r['codice'] }}</td>
+        <td>
+            {{ r['codice'] }}
+            {% if r.get('collegato_a') %}
+              <span style="color:blue; font-weight:bold;">🔗 collegato a {{ r['collegato_a'] }}</span>
+            {% endif %}
+        </td>
         <td>
           {{ r['quantita'] }}
           {% if r['quantita'] <= 2 %}
