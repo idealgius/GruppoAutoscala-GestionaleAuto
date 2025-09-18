@@ -11,11 +11,16 @@
     <option value="">-- Filtra per prefisso (facoltativo) --</option>
     <option value="BH" {% if filtro_prefisso == 'BH' %}selected{% endif %}>BH</option>
     <option value="MM" {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
+    <option value="COF" {% if filtro_prefisso == 'COF' %}selected{% endif %}>COF</option>
+    <option value="XEN" {% if filtro_prefisso == 'XEN' %}selected{% endif %}>XEN</option>
   </select>
+
   <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ ricerca }}" style="flex:1; padding:6px;">
+  
   <button type="submit" class="button" style="padding:6px 12px;">🔍 Applica</button>
+
   {% if ricerca or filtro_prefisso %}
-  <a href="/ricambi" class="button" style="padding:6px 12px; background-color:#ccc;">🔄 Reset</a>
+    <a href="/ricambi" class="button" style="padding:6px 12px; background-color:#ccc;">🔄 Reset</a>
   {% endif %}
 </form>
 

@@ -1,703 +1,511 @@
-from flask import Flask, render_template, request, redirect, session, url_for, flash
-import sqlite3
-from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import hashlib
-import os
-import re
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import datetime
+from functools import wraps
 
-# --- DEBUG DATABASE_URL ---
-print("DATABASE_URL =", os.environ.get("DATABASE_URL"))
+app = Flask(__name__)
+app.secret_key = 'tuo_secret_key'
 
-# ----- DB wrapper per compatibilità SQLite <-> PostgreSQL -----
-class CursorWrapper:
-    def __init__(self, cursor):
-        self._cursor = cursor
+# =====================================
+# Database connection
+# =====================================
+def get_db_connection():
+    conn = psycopg2.connect(
+        host='aws-1-eu-central-1.pooler.supabase.com',
+        port=6543,
+        database='postgres',
+        user='postgres.cwuzhmfktymgmjolykgs',
+        password='CRonaldo7.!'
+    )
+    return conn
 
-    def fetchone(self):
-        return self._cursor.fetchone()
+# =====================================
+# Utility functions
+# =====================================
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-    def fetchall(self):
-        return self._cursor.fetchall()
-
-    def __getattr__(self, name):
-        return getattr(self._cursor, name)
-
-
-class DBConn:
-    def __init__(self, raw_conn, kind):
-        self._conn = raw_conn
-        self.kind = kind  # 'sqlite' o 'pg'
-
-    def execute(self, query, params=()):
-        if self.kind == 'sqlite':
-            return self._conn.execute(query, params)
-        else:
-            import psycopg2.extras
-            cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            if isinstance(params, dict):
-                q = re.sub(r':([a-zA-Z_][a-zA-Z0-9_]*)', r'%(\1)s', query)
-                cur.execute(q, params)
-            else:
-                q = query.replace('?', '%s')
-                if isinstance(params, (list, tuple)):
-                    cur.execute(q, params)
-                else:
-                    cur.execute(q, (params,))
-            return CursorWrapper(cur)
-
-    def commit(self):
-        return self._conn.commit()
-
-    def close(self):
-        return self._conn.close()
-
-
-# ----- Avvio app con percorso templates corretto -----
-app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
-app.secret_key = "supersecretkey123"  # 🔒 Cambia in produzione
-
-# ---------- Mappa username -> nome reale ----------
-NOMI_REAL = {
-    "G.AS_Gianluca.Scala": "Gianluca Scala",
-    "G.AS_Clemente.Palladino": "Clemente Palladino",
-    "G.AS_Carlo.Postiglione": "Carlo Postiglione",
-    "G.AS_Giuseppe.Palladino": "Giuseppe Palladino"
-}
-
-# ---------- Connessione DB ----------
-def get_db():
-    db_url = os.environ.get("DATABASE_URL")
-    if db_url:
-        import psycopg2
-        conn = psycopg2.connect(db_url, sslmode="require")
-        return DBConn(conn, "pg")
-    else:
-        conn = sqlite3.connect("concessionaria.db", check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return DBConn(conn, "sqlite")
-
-
-# ---------- Assicura colonna "quantita" in ricambi e tabella codici_alternativi ----------
-conn = get_db()
-try:
-    conn.execute("ALTER TABLE ricambi ADD COLUMN quantita INTEGER DEFAULT 0")
-except Exception:
-    pass
-
-# Creazione tabella codici alternativi se non esiste
-try:
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS codici_alternativi (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ricambio_id INTEGER NOT NULL,
-            codice TEXT NOT NULL,
-            utente_id INTEGER NOT NULL,
-            FOREIGN KEY (ricambio_id) REFERENCES ricambi(id)
-        )
-    """)
-except Exception:
-    pass
-finally:
-    try:
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
-
-
-# ---------- Decoratore protezione ----------
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if "user_id" not in session:
-            return redirect(url_for("login"))
+        if not session.get('user_id'):
+            flash("Devi essere loggato per accedere a questa pagina.")
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
-
-# ---------- Funzione helper per scalare giacenza ----------
-def scalo_ricambio(ricambio_id):
-    conn = get_db()
-    conn.execute(
-        "UPDATE ricambi SET quantita = quantita - 1 WHERE id=? AND utente_id=?",
-        (ricambio_id, session["user_id"])
-    )
-    conn.commit()
-    q = conn.execute(
-        "SELECT quantita, nome FROM ricambi WHERE id=? AND utente_id=?",
-        (ricambio_id, session["user_id"])
-    ).fetchone()
+def get_nome_reale(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM utenti WHERE id = %s", (user_id,))
+    row = cur.fetchone()
     conn.close()
-    if q:
-        nome = q["nome"]
-        quantita = q["quantita"]
-        if quantita == 2:
-            flash(f"⚠️ Giacenza bassa per {nome} (2 rimasti)")
-        elif quantita == 1:
-            flash(f"⚠️ Solo 1 {nome} rimasto")
-        elif quantita == 0:
-            flash(f"❌ {nome} esaurito!")
+    if row:
+        return row[0]
+    return None
 
-
-# ---------- LOGIN/LOGOUT ----------
-@app.route("/login", methods=["GET", "POST"])
+# =====================================
+# LOGIN / LOGOUT
+# =====================================
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-        hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-        conn = get_db()
-        user = conn.execute(
-            "SELECT id FROM utenti WHERE username=? AND password=?",
-            (username, hashed_pw)
-        ).fetchone()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = hash_password(request.form['password'])
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM utenti WHERE username=%s AND password=%s", (username, password))
+        user = cur.fetchone()
         conn.close()
         if user:
-            session["user_id"] = user["id"]
-            session["username"] = username
-            flash(f"✅ Benvenuto, {NOMI_REAL.get(username, username)}!")
-            return redirect(url_for("home"))
-        flash("❌ Username o password errati")
-        return redirect(url_for("login"))
-    return render_template("login.html")
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            return redirect(url_for('home'))
+        else:
+            flash("Username o password non validi.")
+    return render_template('login.html')
 
-
-@app.route("/logout")
+@app.route('/logout')
 @login_required
 def logout():
     session.clear()
-    flash("Logout effettuato correttamente")
-    return redirect(url_for("login"))
+    flash("Hai effettuato il logout.")
+    return redirect('/login')
 
-
-# ---------- HOME ----------
-@app.route("/")
+# =====================================
+# HOME
+# =====================================
+@app.route('/')
 @login_required
 def home():
-    username = session.get("username")
-    nome_reale = NOMI_REAL.get(username, username)
-    return render_template("home.html", nome_reale=nome_reale)
+    nome_reale = get_nome_reale(session['user_id'])
+    return render_template('home.html', nome_reale=nome_reale)
 
-
-# =========================
-#          CLIENTI
-# =========================
-@app.route("/inserisci_cliente")
-@login_required
-def inserisci_cliente():
-    return render_template("inserisci_cliente.html")
-
-
-@app.route("/salva_cliente", methods=["POST"])
-@login_required
-def salva_cliente():
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["nome", "cognome", "data_nascita", "provincia", "comune",
-             "codice_fiscale", "telefono", "email"]}
-    dati["utente_id"] = session["user_id"]
-
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO clienti (nome, cognome, data_nascita, provincia, comune, codice_fiscale, telefono, email, utente_id)
-        VALUES (:nome, :cognome, :data_nascita, :provincia, :comune, :codice_fiscale, :telefono, :email, :utente_id)
-    """, dati)
-    conn.commit()
-    conn.close()
-    flash("✅ Cliente salvato correttamente")
-    return redirect(url_for("lista_clienti"))
-@app.route("/clienti")
+# =====================================
+# CLIENTI
+# =====================================
+@app.route('/clienti')
 @login_required
 def lista_clienti():
-    conn = get_db()
-    clienti = conn.execute(
-        "SELECT * FROM clienti WHERE utente_id=?",
-        (session["user_id"],)
-    ).fetchall()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+    clienti = cur.fetchall()
     conn.close()
-    return render_template("clienti.html", clienti=clienti)
+    return render_template('clienti.html', clienti=clienti)
 
+@app.route('/inserisci_cliente', methods=['GET'])
+@login_required
+def inserisci_cliente():
+    return render_template('inserisci_cliente.html')
 
-@app.route("/modifica_cliente/<int:id>")
+@app.route('/salva_cliente', methods=['POST'])
+@login_required
+def salva_cliente():
+    data = (
+        request.form['nome'],
+        request.form['cognome'],
+        request.form['data_nascita'] or None,
+        request.form['provincia'],
+        request.form['comune'],
+        request.form['codice_fiscale'],
+        request.form.get('telefono'),
+        request.form.get('email'),
+        session['user_id']
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO clienti
+        (nome, cognome, data_nascita, provincia, comune, codice_fiscale, telefono, email, utente_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, data)
+    conn.commit()
+    conn.close()
+    return redirect('/clienti')
+
+@app.route('/modifica_cliente/<int:id>', methods=['GET'])
 @login_required
 def modifica_cliente(id):
-    conn = get_db()
-    cliente = conn.execute(
-        "SELECT * FROM clienti WHERE id=? AND utente_id=?", (id, session["user_id"])
-    ).fetchone()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM clienti WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+    cliente = cur.fetchone()
     conn.close()
     if cliente:
-        return render_template("modifica_cliente.html", cliente=cliente)
-    flash(f"❌ Cliente ID {id} non trovato o non accessibile")
-    return redirect(url_for("lista_clienti"))
+        return render_template('modifica_cliente.html', cliente=cliente)
+    flash("Cliente non trovato.")
+    return redirect('/clienti')
 
-
-@app.route("/aggiorna_cliente/<int:id>", methods=["POST"])
+@app.route('/aggiorna_cliente/<int:id>', methods=['POST'])
 @login_required
 def aggiorna_cliente(id):
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["nome", "cognome", "data_nascita", "provincia", "comune",
-             "codice_fiscale", "telefono", "email"]}
-    dati["utente_id"] = session["user_id"]
-    dati["id"] = id
-
-    conn = get_db()
-    conn.execute("""
+    data = (
+        request.form['nome'],
+        request.form['cognome'],
+        request.form['data_nascita'] or None,
+        request.form['provincia'],
+        request.form['comune'],
+        request.form['codice_fiscale'],
+        request.form.get('telefono'),
+        request.form.get('email'),
+        session['user_id'],
+        id
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
         UPDATE clienti
-        SET nome=:nome, cognome=:cognome, data_nascita=:data_nascita, provincia=:provincia, comune=:comune,
-            codice_fiscale=:codice_fiscale, telefono=:telefono, email=:email
-        WHERE id=:id AND utente_id=:utente_id
-    """, dati)
+        SET nome=%s, cognome=%s, data_nascita=%s, provincia=%s, comune=%s,
+            codice_fiscale=%s, telefono=%s, email=%s, utente_id=%s
+        WHERE id=%s
+    """, data)
     conn.commit()
     conn.close()
-    flash("✅ Cliente aggiornato correttamente")
-    return redirect(url_for("lista_clienti"))
+    return redirect('/clienti')
 
-
-@app.route("/elimina_cliente/<int:id>")
+@app.route('/elimina_cliente/<int:id>')
 @login_required
 def elimina_cliente(id):
-    conn = get_db()
-    vetture_collegate = conn.execute(
-        "SELECT COUNT(*) as c FROM vetture WHERE cliente_id=? AND utente_id=?",
-        (id, session["user_id"])
-    ).fetchone()["c"]
-    if vetture_collegate > 0:
-        conn.close()
-        flash(f"❌ Non puoi eliminare: il cliente ha {vetture_collegate} vettura/e associate.")
-        return redirect(url_for("lista_clienti"))
-    conn.execute("DELETE FROM clienti WHERE id=? AND utente_id=?", (id, session["user_id"]))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM clienti WHERE id=%s AND utente_id=%s", (id, session['user_id']))
     conn.commit()
     conn.close()
-    flash("✅ Cliente eliminato")
-    return redirect(url_for("lista_clienti"))
+    return redirect('/clienti')
 
-
-# =========================
-#          VETTURE
-# =========================
-@app.route("/inserisci_vettura")
-@login_required
-def inserisci_vettura():
-    conn = get_db()
-    clienti = conn.execute(
-        "SELECT id, nome, cognome FROM clienti WHERE utente_id=?",
-        (session["user_id"],)
-    ).fetchall()
-    conn.close()
-    return render_template("inserisci_vettura.html", clienti=clienti)
-
-
-@app.route("/salva_vettura", methods=["POST"])
-@login_required
-def salva_vettura():
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["targa", "marca", "modello", "cilindrata", "kw", "carburante",
-             "codice_motore", "telaio", "immatricolazione", "km", "cambio"]}
-    dati["cliente_id"] = request.form.get("cliente_id", "").strip()
-    dati["utente_id"] = session["user_id"]
-
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO vetture (cliente_id, targa, marca, modello, cilindrata, kw, carburante,
-                             codice_motore, telaio, immatricolazione, km, cambio, utente_id)
-        VALUES (:cliente_id, :targa, :marca, :modello, :cilindrata, :kw, :carburante,
-                :codice_motore, :telaio, :immatricolazione, :km, :cambio, :utente_id)
-    """, dati)
-    conn.commit()
-    conn.close()
-    flash("✅ Vettura salvata correttamente")
-    return redirect(url_for("lista_vetture"))
-
-
-@app.route("/vetture")
+# =====================================
+# VETTURE
+# =====================================
+@app.route('/vetture')
 @login_required
 def lista_vetture():
-    conn = get_db()
-    vetture = conn.execute("""
-        SELECT v.id, v.targa, v.marca, v.modello, v.cilindrata, v.kw, v.carburante, v.codice_motore,
-               COALESCE(c.nome || ' ' || c.cognome, '—') AS cliente_nome
-        FROM vetture v
-        LEFT JOIN clienti c ON v.cliente_id=c.id
-        WHERE v.utente_id=?
-        ORDER BY v.id DESC
-    """, (session["user_id"],)).fetchall()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM vetture WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+    vetture = cur.fetchall()
     conn.close()
-    return render_template("vetture.html", vetture=vetture)
+    return render_template('vetture.html', vetture=vetture)
 
+@app.route('/inserisci_vettura', methods=['GET'])
+@login_required
+def inserisci_vettura():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT id, nome, cognome FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+    clienti = cur.fetchall()
+    conn.close()
+    return render_template('inserisci_vettura.html', clienti=clienti)
 
-@app.route("/modifica_vettura/<int:id>")
+@app.route('/salva_vettura', methods=['POST'])
+@login_required
+def salva_vettura():
+    data = (
+        request.form['cliente_id'],
+        request.form['targa'],
+        request.form['marca'],
+        request.form['modello'],
+        request.form['cilindrata'],
+        request.form['kw'],
+        request.form['carburante'],
+        request.form.get('codice_motore'),
+        request.form.get('telaio'),
+        request.form.get('immatricolazione') or None,
+        request.form.get('km'),
+        request.form.get('cambio'),
+        session['user_id']
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO vetture
+        (cliente_id,targa,marca,modello,cilindrata,kw,carburante,codice_motore,telaio,immatricolazione,km,cambio,utente_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, data)
+    conn.commit()
+    conn.close()
+    return redirect('/vetture')
+
+@app.route('/modifica_vettura/<int:id>', methods=['GET'])
 @login_required
 def modifica_vettura(id):
-    conn = get_db()
-    vettura = conn.execute(
-        "SELECT * FROM vetture WHERE id=? AND utente_id=?", (id, session["user_id"])
-    ).fetchone()
-    clienti = conn.execute(
-        "SELECT id, nome, cognome FROM clienti WHERE utente_id=?",
-        (session["user_id"],)
-    ).fetchall()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM vetture WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+    vettura = cur.fetchone()
+    cur.execute("SELECT id, nome, cognome FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+    clienti = cur.fetchall()
     conn.close()
     if vettura:
-        return render_template("modifica_vettura.html", vettura=vettura, clienti=clienti)
-    flash(f"❌ Vettura ID {id} non trovata o non accessibile")
-    return redirect(url_for("lista_vetture"))
+        return render_template('modifica_vettura.html', vettura=vettura, clienti=clienti)
+    flash("Vettura non trovata.")
+    return redirect('/vetture')
 
-
-@app.route("/aggiorna_vettura/<int:id>", methods=["POST"])
+@app.route('/aggiorna_vettura/<int:id>', methods=['POST'])
 @login_required
 def aggiorna_vettura(id):
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["targa", "marca", "modello", "cilindrata", "kw", "carburante",
-             "codice_motore", "telaio", "immatricolazione", "km", "cambio"]}
-    dati["cliente_id"] = request.form.get("cliente_id", "").strip()
-    dati["utente_id"] = session["user_id"]
-    dati["id"] = id
-
-    conn = get_db()
-    conn.execute("""
+    data = (
+        request.form['targa'],
+        request.form['marca'],
+        request.form['modello'],
+        request.form['cilindrata'],
+        request.form['kw'],
+        request.form['carburante'],
+        request.form.get('codice_motore'),
+        request.form['cliente_id'],
+        session['user_id'],
+        id
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
         UPDATE vetture
-        SET cliente_id=:cliente_id, targa=:targa, marca=:marca, modello=:modello,
-            cilindrata=:cilindrata, kw=:kw, carburante=:carburante,
-            codice_motore=:codice_motore, telaio=:telaio,
-            immatricolazione=:immatricolazione, km=:km, cambio=:cambio
-        WHERE id=:id AND utente_id=:utente_id
-    """, dati)
+        SET targa=%s, marca=%s, modello=%s, cilindrata=%s, kw=%s, carburante=%s,
+            codice_motore=%s, cliente_id=%s, utente_id=%s
+        WHERE id=%s
+    """, data)
     conn.commit()
     conn.close()
-    flash("✅ Vettura aggiornata correttamente")
-    return redirect(url_for("lista_vetture"))
+    return redirect('/vetture')
 
-
-@app.route("/elimina_vettura/<int:id>")
+@app.route('/elimina_vettura/<int:id>')
 @login_required
 def elimina_vettura(id):
-    conn = get_db()
-    conn.execute("DELETE FROM vetture WHERE id=? AND utente_id=?", (id, session["user_id"]))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM vetture WHERE id=%s AND utente_id=%s", (id, session['user_id']))
     conn.commit()
     conn.close()
-    flash("✅ Vettura eliminata correttamente")
-    return redirect(url_for("lista_vetture"))
+    return redirect('/vetture')
 
-
-# =========================
-#          MODELLI
-# =========================
-@app.route("/modelli")
+# =====================================
+# MODELLI
+# =====================================
+@app.route('/modelli')
 @login_required
 def lista_modelli():
-    conn = get_db()
-    modelli = conn.execute("""
-        SELECT id, marca, modello, cilindrata, kw, carburante, codice_motore
-        FROM modelli
-        WHERE utente_id=?
-        ORDER BY id DESC
-    """, (session["user_id"],)).fetchall()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM modelli WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+    modelli = cur.fetchall()
     conn.close()
-    return render_template("modelli.html", modelli=modelli)
+    return render_template('modelli.html', modelli=modelli)
 
-
-@app.route("/inserisci_modello")
+@app.route('/inserisci_modello', methods=['GET'])
 @login_required
 def inserisci_modello():
-    return render_template("inserisci_modello.html")
+    return render_template('inserisci_modello.html')
 
-
-@app.route("/salva_modello", methods=["POST"])
+@app.route('/salva_modello', methods=['POST'])
 @login_required
 def salva_modello():
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["marca", "modello", "cilindrata", "kw", "carburante", "codice_motore"]}
-    dati["utente_id"] = session["user_id"]
-
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO modelli (marca, modello, cilindrata, kw, carburante, codice_motore, utente_id)
-        VALUES (:marca, :modello, :cilindrata, :kw, :carburante, :codice_motore, :utente_id)
-    """, dati)
+    data = (
+        request.form['marca'],
+        request.form['modello'],
+        request.form.get('cilindrata'),
+        request.form.get('kw'),
+        request.form.get('carburante'),
+        request.form.get('codice_motore'),
+        session['user_id']
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO modelli
+        (marca, modello, cilindrata, kw, carburante, codice_motore, utente_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, data)
     conn.commit()
     conn.close()
-    flash("✅ Modello salvato correttamente")
-    return redirect(url_for("lista_modelli"))
-@app.route("/modifica_modello/<int:id>")
+    return redirect('/modelli')
+
+@app.route('/modifica_modello/<int:id>', methods=['GET'])
 @login_required
 def modifica_modello(id):
-    conn = get_db()
-    modello = conn.execute("SELECT * FROM modelli WHERE id=? AND utente_id=?", (id, session["user_id"])).fetchone()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM modelli WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+    modello = cur.fetchone()
     conn.close()
     if modello:
-        return render_template("modifica_modello.html", modello=modello)
-    flash(f"❌ Modello ID {id} non trovato o non accessibile")
-    return redirect(url_for("lista_modelli"))
+        return render_template('modifica_modello.html', modello=modello)
+    flash("Modello non trovato.")
+    return redirect('/modelli')
 
-
-@app.route("/aggiorna_modello/<int:id>", methods=["POST"])
+@app.route('/aggiorna_modello/<int:id>', methods=['POST'])
 @login_required
 def aggiorna_modello(id):
-    dati = {k: request.form.get(k, "").strip() for k in
-            ["marca", "modello", "cilindrata", "kw", "carburante", "codice_motore"]}
-    dati["utente_id"] = session["user_id"]
-    dati["id"] = id
-
-    conn = get_db()
-    conn.execute("""
+    data = (
+        request.form['marca'],
+        request.form['modello'],
+        request.form.get('cilindrata'),
+        request.form.get('kw'),
+        request.form.get('carburante'),
+        request.form.get('codice_motore'),
+        session['user_id'],
+        id
+    )
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
         UPDATE modelli
-        SET marca=:marca, modello=:modello, cilindrata=:cilindrata, kw=:kw,
-            carburante=:carburante, codice_motore=:codice_motore
-        WHERE id=:id AND utente_id=:utente_id
-    """, dati)
+        SET marca=%s, modello=%s, cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s, utente_id=%s
+        WHERE id=%s
+    """, data)
     conn.commit()
     conn.close()
-    flash("✅ Modello aggiornato correttamente")
-    return redirect(url_for("lista_modelli"))
+    return redirect('/modelli')
 
-
-@app.route("/elimina_modello/<int:id>")
+@app.route('/elimina_modello/<int:id>')
 @login_required
 def elimina_modello(id):
-    conn = get_db()
-    assoc = conn.execute(
-        "SELECT COUNT(*) as c FROM modello_ricambi mr JOIN modelli m ON m.id=mr.modello_id "
-        "WHERE mr.modello_id=? AND m.utente_id=?",
-        (id, session["user_id"])
-    ).fetchone()["c"]
-    if assoc > 0:
-        conn.close()
-        flash("❌ Rimuovi prima le associazioni ricambi a questo modello.")
-        return redirect(url_for("lista_modelli"))
-
-    conn.execute("DELETE FROM modelli WHERE id=? AND utente_id=?", (id, session["user_id"]))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM modelli WHERE id=%s AND utente_id=%s", (id, session['user_id']))
     conn.commit()
     conn.close()
-    flash("✅ Modello eliminato correttamente")
-    return redirect(url_for("lista_modelli"))
+    return redirect('/modelli')
 
-
-# =========================
-#          RICAMBI
-# =========================
-@app.route("/ricambi", methods=["GET", "POST"])
+# =====================================
+# RICAMBI (GLOBALI)
+# =====================================
+@app.route('/ricambi')
 @login_required
 def lista_ricambi():
-    conn = get_db()
-    filtro_prefisso = request.values.get("prefisso", "").strip().upper()
-    ricerca = request.values.get("q", "").strip().upper()
-
-    query_base = "SELECT id, nome, codice, quantita FROM ricambi WHERE utente_id=?"
-    params = [session["user_id"]]
-
+    filtro_prefisso = request.args.get('prefisso') or ''
+    ricerca = request.args.get('q') or ''
+    query = "SELECT * FROM ricambi WHERE utente_id IS NULL"
+    params = []
     if filtro_prefisso:
-        query_base += " AND codice LIKE ?"
+        query += " AND codice LIKE %s"
         params.append(f"{filtro_prefisso}%")
     if ricerca:
-        last_chars = ricerca[-4:] if len(ricerca) >= 4 else ricerca
-        query_base += " AND (codice LIKE ? OR codice LIKE ?)"
-        params.extend([f"{ricerca}%", f"%{last_chars}"])
-
-    query_base += " ORDER BY nome"
-    ricambi = conn.execute(query_base, tuple(params)).fetchall()
+        query += " AND codice LIKE %s"
+        params.append(f"%{ricerca}%")
+    query += " ORDER BY id"
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute(query, params)
+    ricambi = cur.fetchall()
     conn.close()
+    return render_template('ricambi.html', ricambi=ricambi, filtro_prefisso=filtro_prefisso, ricerca=ricerca)
 
-    def highlight(text):
-        if ricerca and ricerca.upper() in text.upper():
-            idx = text.upper().find(ricerca.upper())
-            return text[:idx] + "<mark>" + text[idx:idx+len(ricerca)] + "</mark>" + text[idx+len(ricerca):]
-        return text
-
-    for r in ricambi:
-        r["nome"] = highlight(r["nome"])
-        r["codice"] = highlight(r["codice"])
-
-    return render_template("ricambi.html", ricambi=ricambi, filtro_prefisso=filtro_prefisso, ricerca=ricerca)
-
-
-@app.route("/inserisci_ricambio")
+@app.route('/inserisci_ricambio', methods=['GET'])
 @login_required
 def inserisci_ricambio():
-    return render_template("inserisci_ricambio.html")
+    return render_template('inserisci_ricambio.html')
 
-
-@app.route("/salva_ricambio", methods=["POST"])
+@app.route('/salva_ricambio', methods=['POST'])
 @login_required
 def salva_ricambio():
-    dati = {
-        "nome": request.form.get("nome", "").strip(),
-        "codice": request.form.get("codice", "").strip(),
-        "quantita": int(request.form.get("quantita", 0)),
-        "utente_id": session["user_id"]
-    }
+    nome = request.form['nome']
+    codice = request.form['codice']
+    quantita = int(request.form.get('quantita', 0))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO ricambi (nome, codice, quantita, utente_id)
+        VALUES (%s,%s,%s,NULL)
+        ON CONFLICT (codice) DO UPDATE
+        SET nome=EXCLUDED.nome,
+            quantita=EXCLUDED.quantita,
+            utente_id=NULL
+    """, (nome, codice, quantita))
+    conn.commit()
+    conn.close()
+    return redirect('/ricambi')
 
-    if not dati["nome"] or not dati["codice"]:
-        flash("❌ Nome e codice sono obbligatori")
-        return redirect(url_for("inserisci_ricambio"))
-
-    conn = get_db()
-    try:
-        conn.execute("""
-            INSERT INTO ricambi (nome, codice, quantita, utente_id)
-            VALUES (:nome, :codice, :quantita, :utente_id)
-        """, dati)
-        conn.commit()
-        flash("✅ Ricambio salvato correttamente")
-    except Exception:
-        flash("❌ Codice ricambio già esistente")
-    finally:
-        conn.close()
-    return redirect(url_for("lista_ricambi"))
-
-
-@app.route("/modifica_ricambio/<int:id>")
+@app.route('/modifica_ricambio/<int:id>', methods=['GET'])
 @login_required
 def modifica_ricambio(id):
-    conn = get_db()
-    ricambio = conn.execute(
-        "SELECT * FROM ricambi WHERE id=? AND utente_id=?", (id, session["user_id"])
-    ).fetchone()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM ricambi WHERE id=%s AND utente_id IS NULL", (id,))
+    ricambio = cur.fetchone()
     conn.close()
     if ricambio:
-        return render_template("modifica_ricambio.html", ricambio=ricambio)
-    flash("❌ Ricambio non trovato o non accessibile")
-    return redirect(url_for("lista_ricambi"))
+        return render_template('modifica_ricambio.html', ricambio=ricambio)
+    flash("Ricambio non trovato.")
+    return redirect('/ricambi')
 
-
-@app.route("/aggiorna_ricambio/<int:id>", methods=["POST"])
+@app.route('/aggiorna_ricambio/<int:id>', methods=['POST'])
 @login_required
 def aggiorna_ricambio(id):
-    dati = {
-        "nome": request.form.get("nome", "").strip(),
-        "codice": request.form.get("codice", "").strip(),
-        "quantita": int(request.form.get("quantita", 0)),
-        "id": id,
-        "utente_id": session["user_id"]
-    }
+    nome = request.form['nome']
+    codice = request.form['codice']
+    quantita = int(request.form.get('quantita', 0))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE ricambi
+        SET nome=%s, codice=%s, quantita=%s
+        WHERE id=%s AND utente_id IS NULL
+    """, (nome, codice, quantita, id))
+    conn.commit()
+    conn.close()
+    return redirect('/ricambi')
 
-    conn = get_db()
-    try:
-        conn.execute("""
-            UPDATE ricambi
-            SET nome=:nome, codice=:codice, quantita=:quantita
-            WHERE id=:id AND utente_id=:utente_id
-        """, dati)
-        conn.commit()
-        flash("✅ Ricambio aggiornato correttamente")
-    except Exception:
-        flash("❌ Codice ricambio già in uso")
-    finally:
-        conn.close()
-    return redirect(url_for("lista_ricambi"))
-
-
-@app.route("/elimina_ricambio/<int:id>")
+@app.route('/elimina_ricambio/<int:id>')
 @login_required
 def elimina_ricambio(id):
-    conn = get_db()
-    assoc = conn.execute("""
-        SELECT COUNT(*) as c
-        FROM modello_ricambi mr
-        JOIN ricambi r ON r.id = mr.ricambio_id
-        WHERE mr.ricambio_id=? AND r.utente_id=?
-    """, (id, session["user_id"])).fetchone()["c"]
-    if assoc > 0:
-        conn.close()
-        flash("❌ Rimuovi prima le associazioni di questo ricambio ai modelli.")
-        return redirect(url_for("lista_ricambi"))
-
-    conn.execute("DELETE FROM ricambi WHERE id=? AND utente_id=?", (id, session["user_id"]))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ricambi WHERE id=%s AND utente_id IS NULL", (id,))
     conn.commit()
     conn.close()
-    flash("✅ Ricambio eliminato")
-    return redirect(url_for("lista_ricambi"))
+    return redirect('/ricambi')
 
-
-# =========================
-#   ASSOCIAZIONI MODELLO↔RICAMBI
-# =========================
-@app.route("/modello/<int:modello_id>/ricambi")
-@login_required
-def ricambi_del_modello(modello_id):
-    conn = get_db()
-    modello = conn.execute(
-        "SELECT * FROM modelli WHERE id=? AND utente_id=?", (modello_id, session["user_id"])
-    ).fetchone()
-    if not modello:
-        conn.close()
-        flash("❌ Modello non trovato o non accessibile")
-        return redirect(url_for("lista_modelli"))
-
-    associati = conn.execute("""
-        SELECT r.id, r.nome, r.codice, r.quantita
-        FROM modello_ricambi mr
-        JOIN ricambi r ON r.id = mr.ricambio_id
-        WHERE mr.modello_id=? AND mr.utente_id=? AND r.utente_id=?
-        ORDER BY r.nome
-    """, (modello_id, session["user_id"], session["user_id"])).fetchall()
-
-    non_associati = conn.execute("""
-        SELECT r.id, r.nome, r.codice, r.quantita
-        FROM ricambi r
-        WHERE r.utente_id=?
-          AND r.id NOT IN (
-              SELECT ricambio_id FROM modello_ricambi
-              WHERE modello_id=? AND utente_id=?
-          )
-        ORDER BY r.nome
-    """, (session["user_id"], modello_id, session["user_id"])).fetchall()
-
-    conn.close()
-    return render_template(
-        "modello_ricambi.html",
-        modello=modello,
-        associati=associati,
-        non_associati=non_associati
-    )
-
-
-@app.route("/modello/<int:modello_id>/aggiungi_ricambio", methods=["POST"])
-@login_required
-def aggiungi_ricambio_a_modello(modello_id):
-    ricambio_id = request.form.get("ricambio_id", "").strip()
-    conn = get_db()
-    m = conn.execute("SELECT id FROM modelli WHERE id=? AND utente_id=?", (modello_id, session["user_id"])).fetchone()
-    r = conn.execute("SELECT id FROM ricambi WHERE id=? AND utente_id=?", (ricambio_id, session["user_id"])).fetchone()
-    if not (m and r):
-        conn.close()
-        flash("❌ Modello o ricambio non valido")
-        return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
-
-    try:
-        conn.execute("""
-            INSERT INTO modello_ricambi (modello_id, ricambio_id, utente_id)
-            VALUES (?, ?, ?)
-        """, (modello_id, ricambio_id, session["user_id"]))
+# =====================================
+# Aggiorna quantità ricambi collegati
+# =====================================
+def aggiorna_quantita_collegati(ricambio_id, nuova_quantita):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT codice FROM ricambi WHERE id=%s AND utente_id IS NULL", (ricambio_id,))
+    row = cur.fetchone()
+    if row:
+        codice = row[0]
+        cur.execute("""
+            UPDATE ricambi r
+            SET quantita = %s
+            FROM ricambi_collegati rc
+            WHERE ((rc.codice_principale = %s AND rc.codice_secondario = r.codice)
+                OR (rc.codice_secondario = %s AND rc.codice_principale = r.codice))
+              AND r.id <> %s
+              AND r.utente_id IS NULL
+        """, (nuova_quantita, codice, codice, ricambio_id))
         conn.commit()
-        flash("✅ Ricambio associato al modello")
-    except Exception:
-        flash("ℹ️ Ricambio già associato a questo modello")
-    finally:
-        conn.close()
-    return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
+    conn.close()
 
-
-@app.route("/modello/<int:modello_id>/rimuovi_ricambio/<int:ricambio_id>")
+@app.route('/aggiorna_quantita_ricambio/<int:id>', methods=['POST'])
 @login_required
-def rimuovi_ricambio_da_modello(modello_id, ricambio_id):
-    conn = get_db()
-    m = conn.execute("SELECT id FROM modelli WHERE id=? AND utente_id=?", (modello_id, session["user_id"])).fetchone()
-    r = conn.execute("SELECT id FROM ricambi WHERE id=? AND utente_id=?", (ricambio_id, session["user_id"])).fetchone()
-    if not (m and r):
-        conn.close()
-        flash("❌ Modello o ricambio non valido")
-        return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
-
-    conn.execute("""
-        DELETE FROM modello_ricambi
-        WHERE modello_id=? AND ricambio_id=? AND utente_id=?
-    """, (modello_id, ricambio_id, session["user_id"]))
+def aggiorna_quantita_ricambio(id):
+    nuova_quantita = int(request.form['quantita'])
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("UPDATE ricambi SET quantita=%s WHERE id=%s AND utente_id IS NULL", (nuova_quantita, id))
     conn.commit()
     conn.close()
-    flash("✅ Associazione rimossa")
-    return redirect(url_for("ricambi_del_modello", modello_id=modello_id))
+    aggiorna_quantita_collegati(id, nuova_quantita)
+    return redirect('/ricambi')
 
+# =====================================
+# STORICO AZIONI
+# =====================================
+@app.route('/storico')
+@login_required
+def storico():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM storico_azioni ORDER BY data_ora DESC")
+    logs = cur.fetchall()
+    conn.close()
+    return render_template('storico.html', logs=logs)
 
-# ---------- Avvio server ----------
-if __name__ == "__main__":
-    app.run(debug=True)
+# =====================================
+# AVVIO SERVER
+# =====================================
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
