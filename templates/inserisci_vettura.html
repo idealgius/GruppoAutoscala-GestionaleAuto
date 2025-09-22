@@ -9,33 +9,34 @@
     <label for="cliente_id">ID Cliente:</label>
     <input type="number" name="cliente_id" required value="{{ request.form.get('cliente_id') or '' }}">
 
-    <label for="marca">Marca:</label>
-    <select name="marca" required>
-        <option value="">-- Seleziona una marca --</option>
-        {% for m in [
-            "ALFA ROMEO","AUDI","BMW","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA",
-            "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI",
-            "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER",
-            "LEXUS","LYNK&CO","MAN","MASERATI","MAXUS","MAZDA","MERCEDES","MG","MINI",
-            "MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO","POLESTAR","PORSCHE","RENAULT",
-            "ROVER","SAAB","SEAT","SKODA","SMART","SSANGYONG","SUBARU","SUZUKI","TATA",
-            "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
-        ] %}
-            <option value="{{ m }}" {% if request.form.get('marca') == m %}selected{% endif %}>{{ m }}</option>
+    <label for="modello_id">Modello:</label>
+    <select name="modello_id" id="modello_id" required>
+        <option value="">-- Seleziona modello --</option>
+        {% for modello in modelli %}
+            <option value="{{ modello.id }}"
+                    data-marca="{{ modello.marca }}"
+                    data-cilindrata="{{ modello.cilindrata }}"
+                    data-kw="{{ modello.kw }}"
+                    data-carburante="{{ modello.carburante }}">
+                {{ modello.marca }} {{ modello.modello }} {% if modello.versione %}({{ modello.versione }}){% endif %}
+            </option>
         {% endfor %}
     </select>
 
+    <label for="marca">Marca:</label>
+    <input type="text" name="marca" id="marca" required readonly value="{{ request.form.get('marca') or '' }}">
+
     <label for="modello">Modello:</label>
-    <input type="text" name="modello" required value="{{ request.form.get('modello') or '' }}">
+    <input type="text" name="modello" id="modello" required readonly value="{{ request.form.get('modello') or '' }}">
 
     <label for="cilindrata">Cilindrata:</label>
-    <input type="text" name="cilindrata" required value="{{ request.form.get('cilindrata') or '' }}">
+    <input type="text" name="cilindrata" id="cilindrata" required value="{{ request.form.get('cilindrata') or '' }}">
 
     <label for="kw">kW:</label>
-    <input type="text" name="kw" required value="{{ request.form.get('kw') or '' }}">
+    <input type="text" name="kw" id="kw" required value="{{ request.form.get('kw') or '' }}">
 
     <label for="carburante">Carburante:</label>
-    <input type="text" name="carburante" required value="{{ request.form.get('carburante') or '' }}">
+    <input type="text" name="carburante" id="carburante" required value="{{ request.form.get('carburante') or '' }}">
 
     <label for="targa">Targa:</label>
     <input type="text" name="targa" required value="{{ request.form.get('targa') or '' }}">
@@ -52,11 +53,20 @@
     <label for="cambio">Cambio (manuale/automatico):</label>
     <input type="text" name="cambio" value="{{ request.form.get('cambio') or '' }}">
 
-    <label for="codice_motore">Codice motore (opzionale):</label>
-    <input type="text" name="codice_motore" value="{{ request.form.get('codice_motore') or '' }}">
-
     <button type="submit">💾 Salva Vettura</button>
 </form>
 
 <a class="button" href="/vetture">🔙 Torna all’elenco vetture</a>
+
+<script>
+document.getElementById('modello_id').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    document.getElementById('marca').value = selected.dataset.marca || '';
+    document.getElementById('modello').value = selected.text.split(' (')[0] || '';
+    document.getElementById('cilindrata').value = selected.dataset.cilindrata || '';
+    document.getElementById('kw').value = selected.dataset.kw || '';
+    document.getElementById('carburante').value = selected.dataset.carburante || '';
+});
+</script>
+
 {% endblock %}

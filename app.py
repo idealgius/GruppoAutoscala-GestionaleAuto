@@ -288,15 +288,40 @@ def elimina_vettura(id):
 def lista_modelli():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT * FROM modelli WHERE utente_id=%s ORDER BY id", (session['user_id'],))
-    modelli = cur.fetchall()
+    
+    # Tutte le marche dell'utente
+    cur.execute("SELECT DISTINCT marca FROM modelli WHERE utente_id=%s ORDER BY marca", (session['user_id'],))
+    marche = [row['marca'] for row in cur.fetchall()]
+    
+    # Tutti i modelli dell'utente
+    cur.execute("SELECT * FROM modelli WHERE utente_id=%s ORDER BY marca, modello, versione", (session['user_id'],))
+    modelli_raw = cur.fetchall()
     conn.close()
-    return render_template('modelli.html', modelli=modelli)
+    
+    # Rimuoviamo eventuali duplicati a livello di Python
+    seen = set()
+    modelli = []
+    for m in modelli_raw:
+        key = (m['marca'], m['modello'], m['versione'])
+        if key not in seen:
+            seen.add(key)
+            modelli.append(m)
+    
+    return render_template('modelli.html', marche=marche, modelli=modelli)
 
 @app.route('/inserisci_modello', methods=['GET'])
 @login_required
 def inserisci_modello():
-    return render_template('inserisci_modello.html')
+    marche = [
+        "ALFA ROMEO","AUDI","BMW","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA",
+        "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI",
+        "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER",
+        "LEXUS","LYNK&CO","MAN","MASERATI","MAXUS","MAZDA","MERCEDES","MG","MINI",
+        "MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO","POLESTAR","PORSCHE","RENAULT",
+        "ROVER","SAAB","SEAT","SKODA","SMART","SSANGYONG","SUBARU","SUZUKI","TATA",
+        "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
+    ]
+    return render_template('inserisci_modello.html', marche=marche)
 
 @app.route('/salva_modello', methods=['POST'])
 @login_required
@@ -304,6 +329,8 @@ def salva_modello():
     data = (
         request.form['marca'],
         request.form['modello'],
+        request.form.get('versione'),
+        request.form.get('codice_versione'),
         request.form.get('cilindrata'),
         request.form.get('kw'),
         request.form.get('carburante'),
@@ -314,8 +341,8 @@ def salva_modello():
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO modelli
-        (marca, modello, cilindrata, kw, carburante, codice_motore, utente_id)
-        VALUES (%s,%s,%s,%s,%s,%s,%s)
+        (marca, modello, versione, codice_versione, cilindrata, kw, carburante, codice_motore, utente_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, data)
     conn.commit()
     conn.close()
@@ -340,6 +367,8 @@ def aggiorna_modello(id):
     data = (
         request.form['marca'],
         request.form['modello'],
+        request.form.get('versione'),
+        request.form.get('codice_versione'),
         request.form.get('cilindrata'),
         request.form.get('kw'),
         request.form.get('carburante'),
@@ -351,7 +380,7 @@ def aggiorna_modello(id):
     cur = conn.cursor()
     cur.execute("""
         UPDATE modelli
-        SET marca=%s, modello=%s, cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s, utente_id=%s
+        SET marca=%s, modello=%s, versione=%s, codice_versione=%s, cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s, utente_id=%s
         WHERE id=%s
     """, data)
     conn.commit()
@@ -367,6 +396,35 @@ def elimina_modello(id):
     conn.commit()
     conn.close()
     return redirect('/modelli')
+
+# =====================================
+# RICAMBI PER MODELLI
+# =====================================
+@app.route('/modello/<int:modello_id>/ricambi')
+@login_required
+def ricambi_modello(modello_id):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    # Prendo il modello
+    cur.execute("SELECT * FROM modelli WHERE id=%s AND utente_id=%s", (modello_id, session['user_id']))
+    modello = cur.fetchone()
+    if not modello:
+        conn.close()
+        flash("Modello non trovato.")
+        return redirect('/modelli')
+    
+    # Ricavi i ricambi collegati a questo modello
+    cur.execute("""
+        SELECT mr.tipo_filtro, r.nome, r.codice
+        FROM modelli_ricambi mr
+        JOIN ricambi r ON mr.ricambio_id = r.id
+        WHERE mr.modello_id=%s
+        ORDER BY mr.tipo_filtro
+    """, (modello_id,))
+    ricambi = cur.fetchall()
+    conn.close()
+    
+    return render_template('ricambi_modello.html', modello=modello, ricambi=ricambi)
 
 # =====================================
 # RICAMBI (GLOBALI)

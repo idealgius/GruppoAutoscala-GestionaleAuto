@@ -10,39 +10,132 @@
   <div style="color:#666; font-size:0.95em;">Modelli registrati dall'utente</div>
 </div>
 
+<!-- Filtri -->
+<div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+    <label for="marcaFiltro">Marca:</label>
+    <select id="marcaFiltro">
+        <option value="">-- Tutte le marche --</option>
+        {% for marca in marche|sort %}
+        <option value="{{ marca }}">{{ marca }}</option>
+        {% endfor %}
+    </select>
+
+    <label for="modelloFiltro">Modello:</label>
+    <select id="modelloFiltro">
+        <option value="">-- Tutti i modelli --</option>
+    </select>
+
+    <label for="versioneFiltro">Versione:</label>
+    <select id="versioneFiltro">
+        <option value="">-- Tutte le versioni --</option>
+    </select>
+</div>
+
 <table>
   <thead>
     <tr>
       <th>ID</th>
+      <th>🔧 Ricambi</th>
       <th>Marca</th>
       <th>Modello</th>
+      <th>Versione</th>
+      <th>Versione Motore</th>
       <th>Cilindrata</th>
       <th>kW</th>
-      <th>Codice Motore</th>
+      <th>Carburante</th>
       <th>Azioni</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody id="tabellaModelli">
     {% for m in modelli %}
-    <tr>
+    <tr data-marca="{{ m['marca'] }}" data-modello="{{ m['modello'] }}" data-versione="{{ m['versione'] or '' }}">
       <td>{{ m['id'] }}</td>
+      <td><a href="/modello/{{ m['id'] }}/ricambi" class="button">🔧</a></td>
       <td>{{ m['marca'] }}</td>
       <td>{{ m['modello'] }}</td>
+      <td>{{ m['versione'] or '—' }}</td>
+      <td>{{ m['codice_versione'] or '—' }}</td>
       <td>{{ m['cilindrata'] or '—' }}</td>
       <td>{{ m['kw'] or '—' }}</td>
-      <td>{{ m['codice_motore'] or '—' }}</td>
+      <td>{{ m['carburante'] or '—' }}</td>
       <td class="action-buttons">
         <a href="/modifica_modello/{{ m['id'] }}" class="modifica">✏️ Modifica</a>
         <a href="/elimina_modello/{{ m['id'] }}" class="elimina" 
            onclick="return confirm('Eliminare questo modello?')">🗑️ Elimina</a>
-        <a href="/modello/{{ m['id'] }}/ricambi" class="modifica">🔗 Ricambi</a>
       </td>
     </tr>
     {% else %}
     <tr>
-      <td colspan="7" style="text-align:center;">Nessun modello registrato.</td>
+      <td colspan="10" style="text-align:center;">Nessun modello registrato.</td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
+
+<script>
+const marcaFiltro = document.getElementById('marcaFiltro');
+const modelloFiltro = document.getElementById('modelloFiltro');
+const versioneFiltro = document.getElementById('versioneFiltro');
+const righe = Array.from(document.querySelectorAll('#tabellaModelli tr[data-marca]'));
+
+function popolaModelli() {
+    const marca = marcaFiltro.value;
+    const modelliSet = new Set();
+    modelloFiltro.innerHTML = '<option value="">-- Tutti i modelli --</option>';
+    versioneFiltro.innerHTML = '<option value="">-- Tutte le versioni --</option>';
+
+    righe.forEach(r => {
+        if (!marca || r.dataset.marca === marca) modelliSet.add(r.dataset.modello);
+    });
+
+    Array.from(modelliSet).sort().forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        modelloFiltro.appendChild(opt);
+    });
+    applicaFiltri();
+}
+
+function popolaVersioni() {
+    const marca = marcaFiltro.value;
+    const modello = modelloFiltro.value;
+    const versioniSet = new Set();
+    versioneFiltro.innerHTML = '<option value="">-- Tutte le versioni --</option>';
+
+    righe.forEach(r => {
+        if ((!marca || r.dataset.marca === marca) && (!modello || r.dataset.modello === modello)) {
+            if(r.dataset.versione) versioniSet.add(r.dataset.versione);
+        }
+    });
+
+    Array.from(versioniSet).sort().forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        versioneFiltro.appendChild(opt);
+    });
+    applicaFiltri();
+}
+
+function applicaFiltri() {
+    const marca = marcaFiltro.value;
+    const modello = modelloFiltro.value;
+    const versione = versioneFiltro.value;
+
+    righe.forEach(r => {
+        const mostra = (!marca || r.dataset.marca === marca)
+                    && (!modello || r.dataset.modello === modello)
+                    && (!versione || r.dataset.versione === versione);
+        r.style.display = mostra ? '' : 'none';
+    });
+}
+
+marcaFiltro.addEventListener('change', () => { popolaModelli(); });
+modelloFiltro.addEventListener('change', popolaVersioni);
+versioneFiltro.addEventListener('change', applicaFiltri);
+
+// inizializzazione iniziale
+popolaModelli();
+</script>
 {% endblock %}

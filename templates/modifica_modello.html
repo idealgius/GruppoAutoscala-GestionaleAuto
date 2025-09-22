@@ -12,6 +12,12 @@
     <label for="modello">Modello:</label>
     <input type="text" id="modello" name="modello" value="{{ modello['modello'] }}" required>
 
+    <label for="versione">Versione:</label>
+    <input type="text" id="versione" name="versione" value="{{ modello['versione'] or '' }}">
+
+    <label for="codice_versione">Codice Versione:</label>
+    <input type="text" id="codice_versione" name="codice_versione" value="{{ modello['codice_versione'] or '' }}">
+
     <label for="cilindrata">Cilindrata:</label>
     <input type="text" id="cilindrata" name="cilindrata" value="{{ modello['cilindrata'] }}">
 

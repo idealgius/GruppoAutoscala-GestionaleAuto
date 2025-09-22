@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Ricambi Modello{% endblock %}
+
+{% block content %}
+<h1>🔧 Ricambi per il modello: {{ modello.marca }} {{ modello.modello }} {{ modello.versione or '' }}</h1>
+
+<div style="margin-bottom:16px;">
+    <a href="/modelli" class="button">⬅️ Torna ai Modelli</a>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nome Ricambio</th>
+      <th>Codice</th>
+      <th>Tipo Filtro</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% if ricambi %}
+      {% for r in ricambi %}
+      <tr>
+        <td>{{ r['id'] }}</td>
+        <td>{{ r['nome'] }}</td>
+        <td>{{ r['codice'] }}</td>
+        <td>{{ r['tipo_filtro'] }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="4" style="text-align:center;">Nessun ricambio associato a questo modello.</td>
+      </tr>
+    {% endif %}
+  </tbody>
+</table>
+{% endblock %}

@@ -6,11 +6,23 @@
 <h1>➕ Inserisci Modello</h1>
 
 <form action="/salva_modello" method="POST" style="max-width:700px; margin:0 auto;">
+
     <label for="marca">Marca:</label>
-    <input type="text" name="marca" id="marca" required>
+    <select name="marca" id="marca" required>
+        <option value="" disabled selected>Seleziona un marchio</option>
+        {% for marca in marchi %}
+            <option value="{{ marca }}">{{ marca }}</option>
+        {% endfor %}
+    </select>
 
     <label for="modello">Modello:</label>
     <input type="text" name="modello" id="modello" required>
+
+    <label for="versione">Versione Motore:</label>
+    <input type="text" name="versione" id="versione">
+
+    <label for="codice_versione">Codice Versione:</label>
+    <input type="text" name="codice_versione" id="codice_versione">
 
     <label for="cilindrata">Cilindrata:</label>
     <input type="text" name="cilindrata" id="cilindrata">
@@ -20,9 +32,6 @@
 
     <label for="carburante">Carburante:</label>
     <input type="text" name="carburante" id="carburante">
-
-    <label for="codice_motore">Codice Motore:</label>
-    <input type="text" name="codice_motore" id="codice_motore">
 
     <button type="submit">💾 Salva Modello</button>
 </form>
