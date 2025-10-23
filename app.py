@@ -31,31 +31,24 @@ import os
 import psycopg2
 from urllib.parse import urlparse
 
+import os
+import psycopg2
+import urllib.parse as urlparse
+
 def get_db_connection():
     try:
-        url = os.getenv("DATABASE_URL")
-        if url:
-            result = urlparse(url)
-            return psycopg2.connect(
-                dbname=result.path[1:],
-                user=result.username,
-                password=result.password,
-                host=result.hostname,
-                port=result.port,
-                sslmode="require"
-            )
-        # fallback se DATABASE_URL non c'è
+        DATABASE_URL = os.getenv("DATABASE_URL")
+        result = urlparse.urlparse(DATABASE_URL)
         return psycopg2.connect(
-            host=os.getenv("DB_HOST"),
-            port=os.getenv("DB_PORT", 6543),
-            database=os.getenv("DB_NAME"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            sslmode="require"
+            dbname=result.path[1:],
+            user=result.username,
+            password=result.password,
+            host=result.hostname,
+            port=result.port,
+            sslmode='require'
         )
     except Exception as e:
         raise RuntimeError(f"Impossibile connettersi al database: {e}")
-
 
 def lavorazioni_officina_query(user_id):
     """Restituisce tutte le lavorazioni relative all'officina indicata."""
