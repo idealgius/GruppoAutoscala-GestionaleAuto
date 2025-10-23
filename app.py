@@ -21,20 +21,24 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'questa_e_una_chiave_di_
 # =====================================
 # CONNESSIONE SUPABASE (HOST ORIGINALE)
 # =====================================
+import os
+import psycopg2
+
 def get_db_connection():
     try:
         return psycopg2.connect(
-            host="aws-1-eu-central-1.pooler.supabase.com",
-            port=6543,
-            database="postgres",
-            user="postgres.cwuzhmfktymgmjolykgs",
-            password="CRonaldo7.!",  # inserisci qui la tua password reale
+            host=os.environ.get("DB_HOST"),
+            port=os.environ.get("DB_PORT", 6543),
+            database=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
             sslmode="require"
         )
     except Exception as e:
         raise RuntimeError(
             "Impossibile connettersi al database. Controlla host, utente, password, porta e SSL."
         ) from e
+
 def lavorazioni_officina_query(user_id):
     """Restituisce tutte le lavorazioni relative all'officina indicata."""
     conn = get_db_connection()
