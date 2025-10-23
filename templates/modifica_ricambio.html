@@ -5,12 +5,28 @@
 {% block content %}
 <h1>✏️ Modifica Ricambio</h1>
 
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul style="color:red; list-style:none; padding:0; text-align:center;">
+      {% for msg in messages %}
+        <li>{{ msg }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
 <form action="/aggiorna_ricambio/{{ ricambio['id'] }}" method="POST" style="max-width:600px; margin:0 auto;">
     <label for="nome">Nome ricambio:</label>
     <input type="text" id="nome" name="nome" value="{{ ricambio['nome'] }}" required>
 
     <label for="codice">Codice (unico):</label>
     <input type="text" id="codice" name="codice" value="{{ ricambio['codice'] }}" required>
+
+    <label for="quantita">Quantità:</label>
+    <input type="number" id="quantita" name="quantita" value="{{ ricambio['quantita'] }}" min="0" required>
+
+    <label for="password">🔑 Inserisci la tua password per confermare:</label>
+    <input type="password" id="password" name="password" placeholder="Password" required>
 
     <button type="submit">💾 Salva modifiche</button>
 </form>

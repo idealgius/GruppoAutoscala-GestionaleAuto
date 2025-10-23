@@ -50,7 +50,8 @@
     {% for m in modelli %}
     <tr data-marca="{{ m['marca'] }}" data-modello="{{ m['modello'] }}" data-versione="{{ m['versione'] or '' }}">
       <td>{{ m['id'] }}</td>
-      <td><a href="/modello/{{ m['id'] }}/ricambi" class="button">🔧</a></td>
+      <!-- ✅ link corretto per mostrare i ricambi -->
+      <td><a href="{{ url_for('modello_ricambi', modello_id=m['id']) }}" class="button">🔧</a></td>
       <td>{{ m['marca'] }}</td>
       <td>{{ m['modello'] }}</td>
       <td>{{ m['versione'] or '—' }}</td>
@@ -58,11 +59,22 @@
       <td>{{ m['cilindrata'] or '—' }}</td>
       <td>{{ m['kw'] or '—' }}</td>
       <td>{{ m['carburante'] or '—' }}</td>
-      <td class="action-buttons">
-        <a href="/modifica_modello/{{ m['id'] }}" class="modifica">✏️ Modifica</a>
-        <a href="/elimina_modello/{{ m['id'] }}" class="elimina" 
-           onclick="return confirm('Eliminare questo modello?')">🗑️ Elimina</a>
+
+      <!-- 🔸 PULSANTI AZIONE INTEGRATI -->
+      <td class="action-buttons" style="display:flex; gap:6px; justify-content:center;">
+        <a href="/modifica_modello/{{ m['id'] }}" 
+           class="shape-btn shape-modifica" 
+           style="background-color:#f4a300; color:white; padding:6px 10px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; font-weight:bold;">
+           ✏️
+        </a>
+        <a href="/elimina_modello/{{ m['id'] }}" 
+           class="shape-btn shape-elimina" 
+           style="background-color:#d9534f; color:white; padding:6px 10px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; font-weight:bold;"
+           onclick="return confirm('Eliminare questo modello?')">
+           🗑️
+        </a>
       </td>
+      <!-- 🔸 FINE SEZIONE MODIFICATA -->
     </tr>
     {% else %}
     <tr>
@@ -135,7 +147,7 @@ marcaFiltro.addEventListener('change', () => { popolaModelli(); });
 modelloFiltro.addEventListener('change', popolaVersioni);
 versioneFiltro.addEventListener('change', applicaFiltri);
 
-// inizializzazione iniziale
+// inizializzazione
 popolaModelli();
 </script>
 {% endblock %}

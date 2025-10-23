@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Seleziona Ruolo{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; margin-bottom:30px;">🔑 Accedi come</h1>
+
+<div style="display:flex; justify-content:center; gap:40px; flex-wrap:wrap; margin-top:20px;">
+    <a href="{{ url_for('login', ruolo='accettazione') }}" class="button" style="padding:15px 25px; font-size:1.2em;">Accettazione</a>
+
+    <a href="{{ url_for('login', ruolo='officina') }}" class="button" style="padding:15px 25px; font-size:1.2em;">Officina</a>
+</div>
+{% endblock %}

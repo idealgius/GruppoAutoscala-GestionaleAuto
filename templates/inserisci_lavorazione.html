@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Lavorazione{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; color:#004080; margin-bottom:30px;">Inserisci Nuova Lavorazione</h1>
+
+<form method="POST" action="{{ url_for('inserisci_lavorazione') }}" style="max-width:600px; margin:auto;">
+    <!-- Tipologie di lavorazione -->
+    <div style="display:flex; align-items:center; gap:20px; margin-bottom:15px;">
+        <label style="display:flex; align-items:center; gap:5px;">
+            <input type="checkbox" name="tagliando" id="tagliando"> Tagliando
+        </label>
+        <label style="display:flex; align-items:center; gap:5px;">
+            <input type="checkbox" name="dischi_pattini" id="dischi_pattini"> Dischi e Pattini freno
+        </label>
+    </div>
+
+    <!-- Campo tipo lavorazione (visibile solo se nessuna checkbox selezionata) -->
+    <div id="tipo_lavorazione_container" style="display:none; margin-bottom:15px;">
+        <label for="tipo_lavorazione">Tipo di lavorazione*</label>
+        <input type="text" name="tipo_lavorazione" id="tipo_lavorazione" placeholder="Specifica la lavorazione">
+    </div>
+
+    <!-- Cliente e Targa -->
+    <div style="margin-bottom:15px;">
+        <label for="cliente_nome">Nome Cliente</label>
+        <input type="text" name="cliente_nome" id="cliente_nome" placeholder="Inserisci nome cliente">
+    </div>
+    <div style="margin-bottom:15px;">
+        <label for="targa">Targa</label>
+        <input type="text" name="targa" id="targa" placeholder="Inserisci targa">
+    </div>
+
+    <!-- Marca -->
+    <label for="marca">Marca</label>
+    <select name="marca" id="marca" style="margin-bottom:15px; display:block;">
+        <option value="">Seleziona Marca</option>
+        {% for marca in marche %}
+            <option value="{{ marca }}">{{ marca }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- Modello -->
+    <label for="modello">Modello</label>
+    <select name="modello" id="modello" style="margin-bottom:15px; display:block;">
+        <option value="">Seleziona Modello</option>
+        {% for m in modelli %}
+            <option data-marca="{{ m.marca }}" value="{{ m.modello }}">{{ m.modello }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- Cilindrata -->
+    <label for="cilindrata">Cilindrata</label>
+    <input type="text" name="cilindrata" id="cilindrata" style="margin-bottom:15px; display:block;">
+
+    <!-- KW -->
+    <label for="kw">KW</label>
+    <input type="text" name="kw" id="kw" style="margin-bottom:15px; display:block;">
+
+    <!-- Anno -->
+    <label for="anno">Anno</label>
+    <input type="text" name="anno" id="anno" style="margin-bottom:15px; display:block;">
+
+    <button type="submit" style="margin-top:20px;">Salva Lavorazione</button>
+</form>
+
+<script>
+// --- GESTIONE VISUALIZZAZIONE CAMPI ---
+const tagliandoCheckbox = document.getElementById('tagliando');
+const dischiCheckbox = document.getElementById('dischi_pattini');
+const tipoContainer = document.getElementById('tipo_lavorazione_container');
+const tipoInput = document.getElementById('tipo_lavorazione');
+
+function toggleTipoLavorazione() {
+    if (tagliandoCheckbox.checked || dischiCheckbox.checked) {
+        tipoContainer.style.display = 'none';
+        tipoInput.required = false;
+    } else {
+        tipoContainer.style.display = 'block';
+        tipoInput.required = true;
+    }
+}
+
+tagliandoCheckbox.addEventListener('change', toggleTipoLavorazione);
+dischiCheckbox.addEventListener('change', toggleTipoLavorazione);
+window.addEventListener('load', toggleTipoLavorazione);
+
+// --- FILTRO MODELLI PER MARCA ---
+document.getElementById('marca').addEventListener('change', function() {
+    const marcaSelezionata = this.value;
+    const modelloSelect = document.getElementById('modello');
+    for (let i = 0; i < modelloSelect.options.length; i++) {
+        const option = modelloSelect.options[i];
+        if (option.value === "") continue;
+        option.style.display = option.getAttribute('data-marca') === marcaSelezionata ? 'block' : 'none';
+    }
+    modelloSelect.value = "";
+});
+
+// --- CONTROLLO CLIENTE O TARGA ---
+document.querySelector("form").addEventListener("submit", function (e) {
+    const nome = document.getElementById("cliente_nome").value.trim();
+    const targa = document.getElementById("targa").value.trim();
+
+    // deve esserci almeno uno tra nome e targa
+    if (!nome && !targa) {
+        e.preventDefault();
+        alert("Devi inserire almeno il nome del cliente o la targa del veicolo.");
+        document.getElementById("cliente_nome").focus();
+        return false;
+    }
+});
+</script>
+{% endblock %}

@@ -13,6 +13,7 @@
     <option value="MM" {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
     <option value="COF" {% if filtro_prefisso == 'COF' %}selected{% endif %}>COF</option>
     <option value="XEN" {% if filtro_prefisso == 'XEN' %}selected{% endif %}>XEN</option>
+    <option value="MIC" {% if filtro_prefisso == 'MIC' %}selected{% endif %}>MIC</option>
   </select>
 
   <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ ricerca }}" style="flex:1; padding:6px;">
@@ -56,10 +57,29 @@
               <span class="badge low-stock">⚠️ Giacenza bassa</span>
             {% endif %}
           {% endif %}
+
+          {% if session.get('username') == 'G.AS_Giuseppe.Palladino' %}
+          <!-- Pulsanti gestione giacenze -->
+          <div style="display:inline-flex; gap:4px; margin-left:6px;">
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
+              <input type="hidden" name="azione" value="incrementa">
+              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">➕</button>
+            </form>
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
+              <input type="hidden" name="azione" value="decrementa">
+              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">➖</button>
+            </form>
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
+              <input type="number" name="nuova_quantita" min="0" style="width:50px; padding:2px;">
+              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">✏️</button>
+            </form>
+          </div>
+          {% endif %}
         </td>
+
         <td class="action-buttons">
-          <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica">✏️ Modifica</a>
-          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina" onclick="return confirm('Eliminare questo ricambio?')">🗑️ Elimina</a>
+          <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica-btn">✏️</a>
+          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina-btn" onclick="return confirm('Eliminare questo ricambio?')">🗑️</a>
         </td>
       </tr>
       {% endfor %}
@@ -75,6 +95,35 @@
 .badge.danger { color: red; font-weight: bold; }
 .badge.warning { color: orange; font-weight: bold; }
 .badge.low-stock { color: darkorange; font-weight: bold; }
-.action-buttons a { margin-right:8px; text-decoration:none; }
+
+.action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
+
+/* Pulsanti modifica ed elimina */
+.modifica-btn {
+  background-color: #f4a300;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.elimina-btn {
+  background-color: #d9534f;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modifica-btn:hover { background-color: #ffb700; }
+.elimina-btn:hover { background-color: #c9302c; }
 </style>
 {% endblock %}

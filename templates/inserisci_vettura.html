@@ -9,34 +9,18 @@
     <label for="cliente_id">ID Cliente:</label>
     <input type="number" name="cliente_id" required value="{{ request.form.get('cliente_id') or '' }}">
 
-    <label for="modello_id">Modello:</label>
-    <select name="modello_id" id="modello_id" required>
-        <option value="">-- Seleziona modello --</option>
-        {% for modello in modelli %}
-            <option value="{{ modello.id }}"
-                    data-marca="{{ modello.marca }}"
-                    data-cilindrata="{{ modello.cilindrata }}"
-                    data-kw="{{ modello.kw }}"
-                    data-carburante="{{ modello.carburante }}">
-                {{ modello.marca }} {{ modello.modello }} {% if modello.versione %}({{ modello.versione }}){% endif %}
-            </option>
+    <label for="marca">Marca:</label>
+    <select name="marca" id="marca" required>
+        <option value="">-- Seleziona marca --</option>
+        {% for m in marche %}
+            <option value="{{ m }}">{{ m }}</option>
         {% endfor %}
     </select>
 
-    <label for="marca">Marca:</label>
-    <input type="text" name="marca" id="marca" required readonly value="{{ request.form.get('marca') or '' }}">
-
-    <label for="modello">Modello:</label>
-    <input type="text" name="modello" id="modello" required readonly value="{{ request.form.get('modello') or '' }}">
-
-    <label for="cilindrata">Cilindrata:</label>
-    <input type="text" name="cilindrata" id="cilindrata" required value="{{ request.form.get('cilindrata') or '' }}">
-
-    <label for="kw">kW:</label>
-    <input type="text" name="kw" id="kw" required value="{{ request.form.get('kw') or '' }}">
-
-    <label for="carburante">Carburante:</label>
-    <input type="text" name="carburante" id="carburante" required value="{{ request.form.get('carburante') or '' }}">
+    <label for="modello_id">Modello:</label>
+    <select name="modello_id" id="modello_id" required disabled>
+        <option value="">-- Seleziona modello --</option>
+    </select>
 
     <label for="targa">Targa:</label>
     <input type="text" name="targa" required value="{{ request.form.get('targa') or '' }}">
@@ -59,13 +43,29 @@
 <a class="button" href="/vetture">🔙 Torna all’elenco vetture</a>
 
 <script>
-document.getElementById('modello_id').addEventListener('change', function() {
-    const selected = this.options[this.selectedIndex];
-    document.getElementById('marca').value = selected.dataset.marca || '';
-    document.getElementById('modello').value = selected.text.split(' (')[0] || '';
-    document.getElementById('cilindrata').value = selected.dataset.cilindrata || '';
-    document.getElementById('kw').value = selected.dataset.kw || '';
-    document.getElementById('carburante').value = selected.dataset.carburante || '';
+const modelli = {{ modelli_json|safe }};
+
+document.getElementById('marca').addEventListener('change', function() {
+    const marcaSelezionata = this.value;
+    const selectModello = document.getElementById('modello_id');
+    selectModello.innerHTML = '<option value="">-- Seleziona modello --</option>';
+
+    if (!marcaSelezionata) {
+        selectModello.disabled = true;
+        return;
+    }
+
+    modelli.filter(m => m.marca === marcaSelezionata).forEach(m => {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.modello + (m.versione ? ` (${m.versione})` : '');
+        option.dataset.cilindrata = m.cilindrata || '';
+        option.dataset.kw = m.kw || '';
+        option.dataset.carburante = m.carburante || '';
+        selectModello.appendChild(option);
+    });
+
+    selectModello.disabled = false;
 });
 </script>
 

@@ -7,20 +7,22 @@
 
 <form action="/aggiorna_cliente/{{ cliente[0] }}" method="POST" style="max-width:600px; margin:0 auto;">
     <label for="nome">Nome:</label>
-<<<<<<< HEAD
     <input type="text" id="nome" name="nome" value="{{ cliente[1] or '' }}" required>
 
     <label for="cognome">Cognome:</label>
     <input type="text" id="cognome" name="cognome" value="{{ cliente[2] or '' }}" required>
 
+    <label for="via">Via:</label>
+    <input type="text" id="via" name="via" value="{{ cliente[9] or '' }}" required>
+
     <label for="data_nascita">Data di nascita:</label>
     <input type="date" id="data_nascita" name="data_nascita" value="{{ cliente[3] or '' }}">
 
     <label for="provincia">Provincia:</label>
-    <input type="text" id="provincia" name="provincia" value="{{ cliente[4] or '' }}">
+    <input type="text" id="provincia" name="provincia" value="{{ cliente[4] or '' }}" required>
 
     <label for="comune">Comune:</label>
-    <input type="text" id="comune" name="comune" value="{{ cliente[5] or '' }}">
+    <input type="text" id="comune" name="comune" value="{{ cliente[5] or '' }}" required>
 
     <label for="codice_fiscale">Codice fiscale:</label>
     <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ cliente[6] or '' }}">
@@ -30,30 +32,6 @@
 
     <label for="email">Email:</label>
     <input type="email" id="email" name="email" value="{{ cliente[8] or '' }}">
-=======
-    <input type="text" id="nome" name="nome" value="{{ cliente[1] }}" required>
-
-    <label for="cognome">Cognome:</label>
-    <input type="text" id="cognome" name="cognome" value="{{ cliente[2] }}" required>
-
-    <label for="data_nascita">Data di nascita:</label>
-    <input type="date" id="data_nascita" name="data_nascita" value="{{ cliente[3] }}">
-
-    <label for="provincia">Provincia:</label>
-    <input type="text" id="provincia" name="provincia" value="{{ cliente[4] }}">
-
-    <label for="comune">Comune:</label>
-    <input type="text" id="comune" name="comune" value="{{ cliente[5] }}">
-
-    <label for="codice_fiscale">Codice fiscale:</label>
-    <input type="text" id="codice_fiscale" name="codice_fiscale" value="{{ cliente[6] }}">
-
-    <label for="telefono">Telefono:</label>
-    <input type="text" id="telefono" name="telefono" value="{{ cliente[7] }}">
-
-    <label for="email">Email:</label>
-    <input type="email" id="email" name="email" value="{{ cliente[8] }}">
->>>>>>> 9f28dacdfa6a1184a0a5f8c99ae0a21a0205dbf1
 
     <button type="submit">💾 Salva modifiche</button>
 </form>

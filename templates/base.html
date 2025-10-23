@@ -17,88 +17,414 @@
         h1 { text-align: center; color: #004080; margin-bottom: 30px; font-size: 2em; }
         a.button { display: inline-block; padding: 12px 20px; margin: 20px 0; background-color: #0052A3; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; transition: background-color 0.3s; }
         a.button:hover { background-color: #003f7f; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 14px 10px; border: 1px solid #ccc; text-align: center; font-size: 0.95em; }
-        th { background-color: #f8f8f8; font-weight: bold; }
-        .action-buttons a { padding: 8px 12px; border-radius: 6px; color: white; text-decoration: none; margin: 0 3px; display: inline-block; }
-        .modifica { background-color: #f0ad4e; }
-        .elimina { background-color: #d9534f; }
         button { background-color: #0052A3; color: white; padding: 12px 20px; border: none; cursor: pointer; border-radius: 6px; margin-top: 16px; }
         button:hover { background-color: #003f7f; }
-        input, select { padding: 10px; width: 100%; margin: 12px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 1em; }
-        @media screen and (max-width: 768px) {
+        input, select, textarea { padding: 10px; width: 100%; margin: 12px 0; border: 1px solid #ccc; border-radius: 5px; font-size: 1em; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #ccc; }
+        th { background-color: #0052A3; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .empty-message { text-align: center; padding: 20px; font-size: 1.2em; color: #666; }
+
+        /* --- PULSANTI MODIFICA/ELIMINA COME SHAPES --- */
+        .model-actions-shape { display: flex; gap: 10px; flex-wrap: wrap; }
+        .shape-btn {
+            padding: 10px 16px;
+            font-weight: bold;
+            border-radius: 14px;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            min-width: 50px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+            color: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+        }
+        .shape-modifica { background-color: #FFA500; }
+        .shape-modifica:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .shape-elimina { background-color: #dc3545; }
+        .shape-elimina:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
+        @media screen and (max-width:768px){
+            .shape-btn { min-width: 40px; padding: 8px 12px; font-size:1em; }
             main { padding: 20px; }
-            table, thead, tbody, th, td, tr { font-size: 0.85em; }
             header img { height: 100px; }
             nav { flex-direction: column; gap: 10px; }
+            table, th, td { font-size: 0.9em; }
         }
+
         .flash-message { margin-bottom: 10px; }
+
+        /* --- QUADRATINI FLOTTANTI --- */
+        #quadrato-lavorazioni, #quadrato-promemoria {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            transition: transform 0.2s;
+        }
+        #quadrato-lavorazioni { background-color: #fff3cd; }
+        #quadrato-lavorazioni:hover { transform: scale(1.1); }
+        #popup-lavorazioni {
+            position: fixed;
+            top: 170px;
+            left: 20px;
+            width: 350px;
+            max-height: 500px;
+            background-color: #fff;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        #popup-lavorazioni h3 { margin-top: 0; color: #004080; text-align: center; }
+        #popup-lavorazioni ul { list-style: none; padding-left: 0; max-height: 400px; overflow-y: auto; }
+        
+        /* --- LAVORAZIONI CON TRE PULSANTI --- */
+        .lavorazione { padding: 8px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; display:flex; justify-content:space-between; align-items:center; }
+        .lavorazione.ordine_inviato { background-color: #fff3cd; } /* giallo */
+        .lavorazione.in_lavorazione { background-color: #cce5ff; } /* azzurro */
+        .lavorazione.completata { background-color: #c8f7c5; } /* verde */
+        .lavorazione button { margin-left: 5px; padding: 4px 8px; font-size:0.85em; border-radius:6px; border:none; cursor:pointer; font-weight:bold; }
+        .btn-presa { background-color:#ffc107; color:#000; }
+        .btn-completata { background-color:#28a745; color:#fff; }
+        .btn-elimina { background-color:#dc3545; color:#fff; }
+
+        #quadrato-promemoria { background-color: #add8e6; top: 180px; }
+        #quadrato-promemoria:hover { transform: scale(1.1); }
+        #popup-promemoria {
+            position: fixed;
+            top: 250px;
+            left: 20px;
+            width: 350px;
+            max-height: 500px;
+            background-color: #e0f7ff;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+        }
+        #popup-promemoria h3 { margin-top: 0; display:flex; justify-content:space-between; align-items:center; color:#004080; }
+        #popup-promemoria ul { list-style: none; padding-left: 0; max-height: 300px; overflow-y: auto; }
+        #popup-promemoria li { margin-bottom: 12px; padding: 8px; background-color: #cceeff; border-radius: 8px; font-size: 0.9em; border-bottom: 1px solid #99ddff; }
+        #popup-promemoria form { margin-top:10px; display:none; flex-direction:column; gap:5px; }
+        #popup-promemoria form input, #popup-promemoria form textarea { width: 100%; }
+
+        #btn-storico {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background-color: #ffc107;
+            color: #000;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1200;
+            transition: transform 0.2s, background-color 0.3s;
+        }
+        #btn-storico:hover { transform: scale(1.1); background-color: #ffcd39; }
+        #popup-storico {
+            position: fixed;
+            bottom: 100px;
+            right: 25px;
+            width: 350px;
+            max-height: 450px;
+            background-color: #fff;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            padding: 20px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1201;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <a href="{{ url_for('home') }}">
-            <img src="{{ url_for('static', filename='logo.26861.png') }}" alt="Logo Gruppo AutoscalA">
-        </a>
-    </header>
+<header>
+    <a href="{{ url_for('home') }}">
+        <img src="{{ url_for('static', filename='logo.26861.png') }}" alt="Logo Gruppo AutoscalA">
+    </a>
+</header>
 
-    <nav>
-        {% if session.get('username') %}
+<nav>
+    {% if session.get('username') %}
+        {% if session.get('ruolo') == 'accettazione' %}
             <a href="{{ url_for('lista_clienti') }}">👥 Clienti</a>
             <a href="{{ url_for('inserisci_cliente') }}">➕ Inserisci Cliente</a>
             <a href="{{ url_for('lista_vetture') }}">🚗 Vetture</a>
             <a href="{{ url_for('inserisci_vettura') }}">➕ Inserisci Vettura</a>
             <a href="{{ url_for('lista_modelli') }}">🛠️ Modelli</a>
             <a href="{{ url_for('lista_ricambi') }}">🔧 Ricambi</a>
-            <a href="{{ url_for('logout') }}">🔒 Logout ({{ session['username'] }})</a>
-        {% else %}
-            <a href="{{ url_for('login') }}">🔑 Login</a>
         {% endif %}
-    </nav>
+        <a href="{{ url_for('logout') }}">🔒 Logout ({{ session['username'] }})</a>
+    {% else %}
+        <a href="{{ url_for('scelta_login') }}">🔑 Login</a>
+    {% endif %}
+</nav>
 
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        <div id="flash-container" style="text-align:center; margin:20px 0;">
-          {% for message in messages %}
-            <p class="flash-message" style="background-color:#d4edda; color:#155724; padding:12px 20px; border-radius:6px; display:inline-block;">
-              {{ message }}
-            </p>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div id="flash-container" style="text-align:center; margin:20px 0;">
+      {% for message in messages %}
+        <p class="flash-message" style="background-color:#d4edda; color:#155724; padding:12px 20px; border-radius:6px; display:inline-block;">
+          {{ message }}
+        </p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
 
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<main>
+    {% block content %}
+    {% if clienti|default([])|length == 0 %}
+        <div class="empty-message">Nessun cliente trovato.</div>
+    {% endif %}
+    {% if vetture|default([])|length == 0 %}
+        <div class="empty-message">Nessuna vettura trovata.</div>
+    {% endif %}
+{% endblock %}
+</main>
 
-    <script>
-        // Nascondi i messaggi flash dopo 10 secondi
-        window.addEventListener('DOMContentLoaded', () => {
-            const flashContainer = document.getElementById('flash-container');
-            if (flashContainer) {
-                setTimeout(() => { flashContainer.style.display = 'none'; }, 10000);
+{% if session.get('username') and session.get('ruolo') == 'accettazione' %}
+<!-- LAVORAZIONI -->
+<div id="quadrato-lavorazioni">📁</div>
+<div id="popup-lavorazioni">
+    <h3>Lavorazioni Recenti</h3>
+    <ul id="lista-lavorazioni"></ul>
+</div>
+
+<!-- PROMEMORIA -->
+<div id="quadrato-promemoria">📝</div>
+<div id="popup-promemoria">
+    <h3>
+        Promemoria
+        <button id="btn-aggiungi-promemoria" style="background:#007BFF;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;">+</button>
+    </h3>
+    <ul id="lista-promemoria"></ul>
+    <form id="form-aggiungi-promemoria">
+        <input type="text" id="titolo-promemoria" placeholder="Titolo">
+        <textarea id="info-promemoria" placeholder="Info aggiuntive"></textarea>
+        <button type="button" id="salva-promemoria">Salva</button>
+    </form>
+</div>
+
+<!-- STORICO -->
+<button id="btn-storico">🕒</button>
+<div id="popup-storico">
+    <h3>Storico Operazioni</h3>
+    <ul id="storico-list"></ul>
+</div>
+<!-- POPUP DETTAGLI LAVORAZIONE -->
+<div id="popup-dettagli" style="display:none;
+     position: fixed; top: 50%; left: 50%;
+     transform: translate(-50%, -50%);
+     background: white; padding: 25px; border-radius: 12px;
+     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+     width: 400px; max-height: 500px; overflow-y: auto; z-index: 1500;">
+  <h3>Dettagli lavorazione</h3>
+  <ul id="dettagli-list"></ul>
+  <button id="chiudi-dettagli"
+          style="margin-top: 10px; background-color:#0052A3; color:white;
+                 border:none; padding:10px 15px; border-radius:6px; cursor:pointer;">
+    Chiudi
+  </button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const quadLav = document.getElementById('quadrato-lavorazioni');
+    const popupLav = document.getElementById('popup-lavorazioni');
+    const listaLav = document.getElementById('lista-lavorazioni');
+
+    quadLav.addEventListener('click', async () => {
+        popupLav.style.display = (popupLav.style.display==='block') ? 'none' : 'block';
+        if (popupLav.style.display==='block') refreshLavorazioni();
+    });
+
+    async function refreshLavorazioni(){
+        listaLav.innerHTML = '<li>Caricamento...</li>';
+        try{
+            const res = await fetch('{{ url_for("ajax_lavorazioni") }}');
+            const data = await res.json();
+            listaLav.innerHTML='';
+            if(!data || data.length===0){
+                listaLav.innerHTML='<li>Nessuna lavorazione</li>';
+                return;
             }
-        });
+            data.forEach(item=>{
+                const li = document.createElement('li');
+                li.classList.add('lavorazione');
+                li.dataset.id = item.id;
 
-        // Toggle password universale
-        function togglePassword(btn) {
-            const input = btn.previousElementSibling;
-            if (input.type === "password") {
-                input.type = "text";
-                btn.textContent = "🙈";
-            } else {
-                input.type = "password";
-                btn.textContent = "👁️";
-            }
-        }
+               // Pulisci prima le classi di stato
+                li.classList.remove('ordine_inviato', 'in_lavorazione', 'completata');
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const toggleButtons = document.querySelectorAll('.toggle-password');
-            toggleButtons.forEach(btn => {
-                btn.addEventListener('click', () => togglePassword(btn));
+               if(item.stato === 'ordine inviato') li.classList.add('ordine_inviato');
+               else if(item.stato === 'in lavorazione') li.classList.add('in_lavorazione');
+               else if(item.stato === 'completata') li.classList.add('completata');
+
+
+                li.innerHTML = `<span>[${item.data_creazione}] ${item.marca} ${item.modello} - ${item.stato}</span>
+                    <span>
+                        ${item.stato!=='in lavorazione'&&item.stato!=='completata'?'<button class="btn-presa">➡️</button>':''}
+                        ${item.stato!=='completata'?'<button class="btn-completata">✔️</button>':''}
+                        <button class="btn-elimina">🗑️</button>
+                    </span>`;
+
+                li.querySelector('.btn-presa')?.addEventListener('click', async (e)=>{
+                    e.stopPropagation();
+                    await aggiornaStato(item.id,'in_lavorazione');
+                });
+                li.querySelector('.btn-completata')?.addEventListener('click', async (e)=>{
+                    e.stopPropagation();
+                    await aggiornaStato(item.id,'completata');
+                });
+                li.querySelector('.btn-elimina').addEventListener('click', async (e)=>{
+                    e.stopPropagation();
+                    if(confirm('Eliminare lavorazione?')) await eliminaLavorazione(item.id);
+                });
+
+                listaLav.appendChild(li);
             });
-        });
-    </script>
+        }catch(err){ console.error(err); listaLav.innerHTML='<li>Errore caricamento</li>'; }
+    }
+
+    async function aggiornaStato(id, stato){
+        try{
+            const res = await fetch(`/accettazione/aggiorna_stato/${id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stato})});
+            const data = await res.json();
+            if(data.success) refreshLavorazioni();
+            else alert('Errore aggiornamento stato');
+        }catch(err){ console.error(err); }
+    }
+
+    async function eliminaLavorazione(id){
+        try{
+            const res = await fetch(`/accettazione/elimina_lavorazione/${id}`, {method:'POST'});
+            const data = await res.json();
+            if(data.success) refreshLavorazioni();
+            else alert('Errore eliminazione');
+        }catch(err){ console.error(err); }
+    }
+
+    const quadProm = document.getElementById('quadrato-promemoria');
+    const popupProm = document.getElementById('popup-promemoria');
+    const btnAggiungi = document.getElementById('btn-aggiungi-promemoria');
+    const formProm = document.getElementById('form-aggiungi-promemoria');
+    const listaProm = document.getElementById('lista-promemoria');
+
+    quadProm.addEventListener('click', ()=>{ 
+        popupProm.style.display = (popupProm.style.display==='block')?'none':'block'; 
+        if(popupProm.style.display==='block') refreshPromemoria(); 
+    });
+    btnAggiungi.addEventListener('click', ()=>{ formProm.style.display='flex'; });
+
+    async function refreshPromemoria(){
+        listaProm.innerHTML = '<li>Caricamento...</li>';
+        try{
+            const res = await fetch('{{ url_for("promemoria") }}'); 
+            const data = await res.json();
+            listaProm.innerHTML = '';
+            if(!data || data.length===0) listaProm.innerHTML='<li>Nessun promemoria</li>';
+            else data.forEach(item=>{
+                const li = document.createElement('li');
+                li.textContent = `${item.titolo}: ${item.info}`;
+                listaProm.appendChild(li);
+            });
+        }catch(err){ console.error(err); listaProm.innerHTML='<li>Errore caricamento</li>'; }
+    }
+
+    document.getElementById('salva-promemoria').addEventListener('click', async ()=>{
+        const tit = document.getElementById('titolo-promemoria').value;
+        const info = document.getElementById('info-promemoria').value;
+        if(!tit) return alert('Titolo richiesto'); 
+        try{
+            const res = await fetch('{{ url_for("aggiungi_promemoria") }}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titolo:tit,info:info})});
+            const data = await res.json();
+            if(data.success){ formProm.reset(); formProm.style.display='none'; refreshPromemoria(); }
+            else alert('Errore salvataggio');
+        }catch(err){ console.error(err); }
+    });
+
+    const btnStorico = document.getElementById('btn-storico');
+    const popupStorico = document.getElementById('popup-storico');
+    const listaStorico = document.getElementById('storico-list');
+
+    btnStorico.addEventListener('click', async ()=>{
+        popupStorico.style.display = (popupStorico.style.display==='block')?'none':'block';
+        if(popupStorico.style.display==='block') refreshStorico();
+    });
+
+    async function refreshStorico(){
+        listaStorico.innerHTML = '<li>Caricamento...</li>';
+        try{
+            const res = await fetch('{{ url_for("storico") }}');
+            const data = await res.json();
+            listaStorico.innerHTML='';
+            if(!data || data.length===0) listaStorico.innerHTML='<li>Nessuna operazione</li>';
+            else data.forEach(item=>{
+                const li = document.createElement('li');
+                li.textContent = `[${item.data}] ${item.operazione}`;
+                listaStorico.appendChild(li);
+            });
+        }catch(err){ console.error(err); listaStorico.innerHTML='<li>Errore caricamento</li>'; }
+    }
+    // --- Gestione popup dettagli lavorazione ---
+const popupDettagli = document.getElementById('popup-dettagli');
+const listaDettagli = document.getElementById('dettagli-list');
+const btnChiudiDettagli = document.getElementById('chiudi-dettagli');
+
+btnChiudiDettagli.addEventListener('click', () => { popupDettagli.style.display = 'none'; });
+
+function mostraDettagliLavorazione(id){
+    fetch(`/dettagli_lavorazione/${id}`)
+    .then(res => res.json())
+    .then(data => {
+        listaDettagli.innerHTML = '';
+        if(data.error){
+            listaDettagli.innerHTML = `<li>${data.error}</li>`;
+        } else {
+            const campi = ['tipo','marca','modello','cilindrata','kw','anno','nome_cliente','cognome_cliente','targa','descrizione','note','stato','data_creazione'];
+            campi.forEach(campo => {
+                listaDettagli.innerHTML += `<li><strong>${campo.replace('_',' ')}:</strong> ${data[campo] || ''}</li>`;
+            });
+        }
+        popupDettagli.style.display = 'block';
+    })
+    .catch(err => console.error(err));
+}
+
+// Aggancio click su ogni lavorazione della lista
+document.addEventListener('click', e => {
+    if(e.target.closest('.lavorazione') && !e.target.closest('button')){
+        const id = e.target.closest('.lavorazione').dataset.id;
+        mostraDettagliLavorazione(id);
+    }
+});
+});
+</script>
+{% endif %}
 </body>
 </html>

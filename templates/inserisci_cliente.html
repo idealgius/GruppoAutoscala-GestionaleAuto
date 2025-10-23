@@ -12,8 +12,11 @@
     <label for="cognome">Cognome:</label>
     <input type="text" name="cognome" required value="{{ request.form.get('cognome') or '' }}">
 
+    <label for="via">Via:</label>
+    <input type="text" name="via" required value="{{ request.form.get('via') or '' }}">
+
     <label for="data_nascita">Data di nascita:</label>
-    <input type="date" name="data_nascita" required value="{{ request.form.get('data_nascita') or '' }}">
+    <input type="date" name="data_nascita" value="{{ request.form.get('data_nascita') or '' }}">
 
     <label for="provincia">Provincia:</label>
     <input type="text" name="provincia" required value="{{ request.form.get('provincia') or '' }}">
@@ -22,7 +25,7 @@
     <input type="text" name="comune" required value="{{ request.form.get('comune') or '' }}">
 
     <label for="codice_fiscale">Codice fiscale:</label>
-    <input type="text" name="codice_fiscale" required value="{{ request.form.get('codice_fiscale') or '' }}">
+    <input type="text" name="codice_fiscale" value="{{ request.form.get('codice_fiscale') or '' }}">
 
     <label for="telefono">Telefono:</label>
     <input type="text" name="telefono" value="{{ request.form.get('telefono') or '' }}">

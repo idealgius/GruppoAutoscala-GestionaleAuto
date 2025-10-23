@@ -5,7 +5,7 @@
 {% block content %}
 <h1>👥 Lista Clienti Registrati</h1>
 
-<!-- Pulsante allineato come in vetture -->
+<!-- Pulsante per inserire nuovo cliente -->
 <div style="margin-bottom:20px;">
     <a href="/inserisci_cliente" class="button">➕ Inserisci Nuovo Cliente</a>
 </div>
@@ -16,9 +16,10 @@
             <th>ID</th>
             <th>Nome</th>
             <th>Cognome</th>
-            <th>Data di nascita</th>
-            <th>Provincia</th>
+            <th>Via</th>
             <th>Comune</th>
+            <th>Provincia</th>
+            <th>Data di nascita</th>
             <th>Codice fiscale</th>
             <th>Telefono</th>
             <th>Email</th>
@@ -32,12 +33,13 @@
                 <td>{{ cliente[0] or '' }}</td>
                 <td>{{ cliente[1] or '' }}</td>
                 <td>{{ cliente[2] or '' }}</td>
-                <td>{{ cliente[3] or '' }}</td>
-                <td>{{ cliente[4] or '' }}</td>
-                <td>{{ cliente[5] or '' }}</td>
-                <td>{{ cliente[6] or '' }}</td>
-                <td>{{ cliente[7] or '' }}</td>
-                <td>{{ cliente[8] or '' }}</td>
+                <td>{{ cliente[3] or '' }}</td> <!-- Via -->
+                <td>{{ cliente[4] or '' }}</td> <!-- Comune -->
+                <td>{{ cliente[5] or '' }}</td> <!-- Provincia -->
+                <td>{{ cliente[6] or '' }}</td> <!-- Data di nascita -->
+                <td>{{ cliente[7] or '' }}</td> <!-- Codice fiscale -->
+                <td>{{ cliente[8] or '' }}</td> <!-- Telefono -->
+                <td>{{ cliente[9] or '' }}</td> <!-- Email -->
                 <td class="action-buttons">
                     <a href="/modifica_cliente/{{ cliente[0] }}" class="modifica">✏️ Modifica</a>
                     <a href="/elimina_cliente/{{ cliente[0] }}" class="elimina"
@@ -47,7 +49,7 @@
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="10" style="text-align:center;">Nessun cliente registrato.</td>
+                <td colspan="11" style="text-align:center;">Nessun cliente registrato.</td>
             </tr>
         {% endif %}
     </tbody>

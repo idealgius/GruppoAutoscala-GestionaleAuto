@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Officina - Gestionale Auto{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; color:#004080; margin-bottom:40px;">
+    Officina - Gestionale Auto
+</h1>
+
+<p style="text-align:center; font-size:1.2em; margin-bottom:30px;">
+    Benvenuto, {{ nome_reale }}!
+</p>
+
+{% if session.get('user_id') %}
+<!-- Pannello di accesso rapido -->
+<div style="display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin-top:20px;">
+    <a class="button" href="{{ url_for('inserisci_lavorazione') }}" style="padding:10px 20px; background:#007BFF; color:white; border-radius:5px; text-decoration:none; transition: background 0.3s;">
+        ➕ Nuova Lavorazione
+    </a>
+</div>
+
+<!-- Lista Lavorazioni Tecnico -->
+<h2 style="text-align:center; margin-top:40px;">Le tue lavorazioni</h2>
+<div id="lavorazioni-container" style="display:flex; flex-wrap:wrap; justify-content:center;">
+    {% for lav in lavorazioni %}
+        {% set colore = lav.colore if lav.colore else '#f2f2f2' %}
+        {% set tipo = lav.tipo if lav.tipo else 'Lavorazione' %}
+        {% set stato = lav.stato if lav.stato else '-' %}
+        <div class="lavorazione" style="background-color: {{ colore }}; padding:15px; margin:10px; border-radius:8px; width:300px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onclick="toggleDettaglio({{ lav.id }})">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>{{ tipo }}</strong>
+                <span style="font-size:0.9em; font-weight:bold;">Stato: {{ stato }}</span>
+            </div>
+            <div id="dettaglio-{{ lav.id }}" style="display:none; margin-top:10px; font-size:0.95em; line-height:1.4;">
+                Marca: {{ lav.marca or '-' }} <br>
+                Modello: {{ lav.modello or '-' }} <br>
+                Cilindrata: {{ lav.cilindrata or '-' }} <br>
+                KW: {{ lav.kw or '-' }} <br>
+                Anno: {{ lav.anno or '-' }} <br>
+                {% if lav.note %}Note: {{ lav.note }}<br>{% endif %}
+                {% if lav.cliente_nome %}Cliente: {{ lav.cliente_nome }}{% endif %}
+            </div>
+        </div>
+    {% else %}
+        <p style="text-align:center; color:#666; margin-top:20px;">Nessuna lavorazione trovata.</p>
+    {% endfor %}
+</div>
+
+<script>
+function toggleDettaglio(id) {
+    const div = document.getElementById('dettaglio-' + id);
+    const isVisible = div.style.display === 'block';
+    div.style.display = isVisible ? 'none' : 'block';
+
+    const card = div.parentElement;
+    if (!isVisible) {
+        card.style.transform = 'scale(1.03)';
+        setTimeout(() => { card.style.transform = 'scale(1)'; }, 200);
+    }
+}
+</script>
+{% endif %}
+
+{% endblock %}
