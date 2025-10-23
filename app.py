@@ -10,8 +10,13 @@ import json
 # =====================================
 # CONFIG
 # =====================================
+import os
+from flask import Flask
+
 app = Flask(__name__)
-app.secret_key = 'tuachiave'  # mantengo la tua chiave originale
+
+# Imposta SECRET_KEY: usa la variabile d'ambiente se disponibile, altrimenti usa una chiave di default per locale
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'questa_e_una_chiave_di_default')
 
 # =====================================
 # CONNESSIONE SUPABASE (HOST ORIGINALE)
