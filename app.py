@@ -27,20 +27,35 @@ import psycopg2
 import os
 import psycopg2
 
+import os
+import psycopg2
+from urllib.parse import urlparse
+
 def get_db_connection():
     try:
+        url = os.getenv("DATABASE_URL")
+        if url:
+            result = urlparse(url)
+            return psycopg2.connect(
+                dbname=result.path[1:],
+                user=result.username,
+                password=result.password,
+                host=result.hostname,
+                port=result.port,
+                sslmode="require"
+            )
+        # fallback se DATABASE_URL non c'è
         return psycopg2.connect(
-            host=os.getenv("DB_HOST", "aws-1-eu-central-1.pooler.supabase.com"),
+            host=os.getenv("DB_HOST"),
             port=os.getenv("DB_PORT", 6543),
-            database=os.getenv("DB_NAME", "postgres"),
-            user=os.getenv("DB_USER", "postgres.cwuzhmfktymgmjolykgs"),
-            password=os.getenv("DB_PASSWORD", "CRonaldo7.!"),
+            database=os.getenv("DB_NAME"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
             sslmode="require"
         )
     except Exception as e:
-        raise RuntimeError(
-            f"Impossibile connettersi al database: {e}"
-        )
+        raise RuntimeError(f"Impossibile connettersi al database: {e}")
+
 
 def lavorazioni_officina_query(user_id):
     """Restituisce tutte le lavorazioni relative all'officina indicata."""
