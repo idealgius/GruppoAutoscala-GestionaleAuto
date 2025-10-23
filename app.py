@@ -35,16 +35,19 @@ import os
 import psycopg2
 import urllib.parse as urlparse
 
+import os
+import psycopg2
+from urllib.parse import urlparse
+
 def get_db_connection():
+    result = urlparse(os.environ["DATABASE_URL"])
     try:
-        DATABASE_URL = os.getenv("DATABASE_URL")
-        result = urlparse.urlparse(DATABASE_URL)
         return psycopg2.connect(
             dbname=result.path[1:],
             user=result.username,
             password=result.password,
             host=result.hostname,
-            port=result.port,
+            port=result.port,   # porta 5432
             sslmode='require'
         )
     except Exception as e:
