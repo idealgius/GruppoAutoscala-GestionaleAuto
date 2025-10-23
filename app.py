@@ -39,19 +39,26 @@ import os
 import psycopg2
 from urllib.parse import urlparse
 
+import os
+import psycopg2
+import socket
+
 def get_db_connection():
-    result = urlparse(os.environ["DATABASE_URL"])
     try:
-        return psycopg2.connect(
-            dbname=result.path[1:],
-            user=result.username,
-            password=result.password,
-            host=result.hostname,
-            port=result.port,   # porta 5432
+        # Risolvi l'host in IPv4 per evitare problemi di connessione
+        host_ipv4 = socket.gethostbyname("aws-1-eu-central-1.pooler.supabase.com")
+        conn = psycopg2.connect(
+            dbname=os.environ.get("DB_NAME", "postgres"),
+            user=os.environ.get("DB_USER", "postgres.cwuzhmfktymgmjolykgs"),
+            password=os.environ.get("DB_PASSWORD", ""),
+            host=host_ipv4,
+            port=os.environ.get("DB_PORT", 6543),
             sslmode='require'
         )
+        return conn
     except Exception as e:
         raise RuntimeError(f"Impossibile connettersi al database: {e}")
+
 
 def lavorazioni_officina_query(user_id):
     """Restituisce tutte le lavorazioni relative all'officina indicata."""
