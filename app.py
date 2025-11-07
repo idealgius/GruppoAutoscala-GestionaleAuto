@@ -1,17 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from flask import request, redirect, url_for, session
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from datetime import datetime
+import os
+import json
 import hashlib
 from functools import wraps
-import json
+from datetime import datetime
+from zoneinfo import ZoneInfo            # per gestire il fuso orario Europe/Rome
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # =====================================
-# CONFIG
+# CONFIG / Fuso orario
 # =====================================
-import os
-from flask import Flask
+FUSO_ITALIA = ZoneInfo("Europe/Rome")
 
 app = Flask(__name__)
 
@@ -42,6 +42,10 @@ from urllib.parse import urlparse
 import os
 import psycopg2
 import socket
+
+from dotenv import load_dotenv
+load_dotenv()
+
 
 def get_db_connection():
     try:
@@ -940,18 +944,40 @@ def ajax_lavorazioni():
 
         if ruolo == 'officina':
             cur.execute("""
-                SELECT id, data_creazione, tipo, COALESCE(tagliando, FALSE) AS tagliando, 
+                SELECT id, data_creazione, tipo, 
+                       COALESCE(tagliando, FALSE) AS tagliando,
                        COALESCE(dischi_pattini, FALSE) AS dischi_pattini,
-                       COALESCE(marca, '') AS marca, COALESCE(modello, '') AS modello, COALESCE(stato, '') AS stato
+                       COALESCE(marca,'') AS marca,
+                       COALESCE(modello,'') AS modello,
+                       COALESCE(stato,'') AS stato,
+                       COALESCE(cliente_nome,'') AS cliente_nome,
+                       COALESCE(targa,'') AS targa,
+                       COALESCE(cilindrata,'') AS cilindrata,
+                       COALESCE(kw,NULL) AS kw,
+                       COALESCE(anno,NULL) AS anno,
+                       COALESCE(ordine_riparazione,'') AS ordine_riparazione,
+                       COALESCE(descrizione,'') AS descrizione,
+                       COALESCE(note,'') AS note
                 FROM lavorazioni
                 WHERE id_officina = %s AND COALESCE(eliminata, false) = false
                 ORDER BY data_creazione DESC
             """, (user_id,))
         elif ruolo == 'accettazione':
             cur.execute("""
-                SELECT id, data_creazione, tipo, COALESCE(tagliando, FALSE) AS tagliando, 
+                SELECT id, data_creazione, tipo, 
+                       COALESCE(tagliando, FALSE) AS tagliando,
                        COALESCE(dischi_pattini, FALSE) AS dischi_pattini,
-                       COALESCE(marca, '') AS marca, COALESCE(modello, '') AS modello, COALESCE(stato, '') AS stato
+                       COALESCE(marca,'') AS marca,
+                       COALESCE(modello,'') AS modello,
+                       COALESCE(stato,'') AS stato,
+                       COALESCE(cliente_nome,'') AS cliente_nome,
+                       COALESCE(targa,'') AS targa,
+                       COALESCE(cilindrata,'') AS cilindrata,
+                       COALESCE(kw,NULL) AS kw,
+                       COALESCE(anno,NULL) AS anno,
+                       COALESCE(ordine_riparazione,'') AS ordine_riparazione,
+                       COALESCE(descrizione,'') AS descrizione,
+                       COALESCE(note,'') AS note
                 FROM lavorazioni
                 WHERE COALESCE(eliminata, false) = false
                   AND TRIM(stato) IN ('ordine inviato', 'in lavorazione', 'completata')
@@ -978,7 +1004,15 @@ def ajax_lavorazioni():
                 "tipo": tipo_display,
                 "marca": r[5] or "",
                 "modello": r[6] or "",
-                "stato": r[7] or ""
+                "stato": r[7] or "",
+                "cliente_nome": r[8] or "",
+                "targa": r[9] or "",
+                "cilindrata": r[10] or "",
+                "kw": r[11] or "",
+                "anno": r[12] or "",
+                "ordine_riparazione": r[13] or "",
+                "descrizione": r[14] or "",
+                "note": r[15] or ""
             })
 
         return jsonify(lavori_list)
@@ -991,7 +1025,6 @@ def ajax_lavorazioni():
             cur.close()
         if conn:
             conn.close()
-
 # =====================================
 # OFFICINA: inserisci / aggiorna stato
 # =====================================
@@ -1006,22 +1039,30 @@ def inserisci_lavorazione():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         if request.method == 'POST':
+            # Checkbox tipologie
             tagliando = request.form.get('tagliando') == 'on'
             dischi_pattini = request.form.get('dischi_pattini') == 'on'
+
+            # Tipo lavorazione se nessuna checkbox selezionata
             tipo_lavorazione = request.form.get('tipo_lavorazione') if not (tagliando or dischi_pattini) else None
+
+            # Dati veicolo e cliente
             marca = request.form.get('marca') or ''
             modello = request.form.get('modello') or ''
             cilindrata = request.form.get('cilindrata')
             kw = request.form.get('kw')
             anno = request.form.get('anno')
-            cliente_nome = request.form.get('cliente_nome')
-            targa = request.form.get('targa')
+            cliente_nome = request.form.get('cliente_nome', '').strip()
+            targa = request.form.get('targa', '').strip()
+            ordine_riparazione = request.form.get('ordine_riparazione', '').strip()
             stato = 'ordine inviato'
 
-            if not cliente_nome and not targa:
-                flash("Devi inserire almeno il nome del cliente o la targa del veicolo.")
+            # Validazione: almeno uno tra cliente_nome, targa o ordine_riparazione
+            if not cliente_nome and not targa and not ordine_riparazione:
+                flash("Devi inserire almeno il nome del cliente, la targa del veicolo o il numero ordine di riparazione.")
                 return redirect(url_for('inserisci_lavorazione'))
 
+            # Funzione di conversione valori numerici
             def to_int(val):
                 try:
                     return int(val) if val and val.strip() else None
@@ -1032,22 +1073,23 @@ def inserisci_lavorazione():
             kw_val = to_int(kw)
             anno_val = to_int(anno)
 
-            # Inserimento definitivo senza controllo duplicati
+            # Inserimento nel database
             cur.execute("""
                 INSERT INTO lavorazioni 
-                (id_officina, tipo, marca, modello, cilindrata, kw, anno, stato, cliente_nome, targa)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                (id_officina, tipo, marca, modello, cilindrata, kw, anno, stato, cliente_nome, targa, ordine_riparazione)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id;
             """, (
                 session['user_id'],
                 tipo_lavorazione if tipo_lavorazione else ('Tagliando' if tagliando else 'Dischi e Pattini freno' if dischi_pattini else None),
-                marca, modello, cilindrata_val, kw_val, anno_val, stato, cliente_nome, targa
+                marca, modello, cilindrata_val, kw_val, anno_val, stato, cliente_nome, targa, ordine_riparazione
             ))
 
             new_record = cur.fetchone()
             new_id = new_record['id'] if new_record else None
             conn.commit()
 
+            # Log storico
             try:
                 log_storico(session['user_id'], f"Inserita lavorazione {new_id}: {marca} {modello}", "lavorazioni", new_id)
             except Exception:
@@ -1065,6 +1107,7 @@ def inserisci_lavorazione():
         conn.close()
 
     return render_template('inserisci_lavorazione.html', marche=marche, modelli=modelli)
+
 
 @app.route('/accettazione/aggiorna_stato/<int:id>', methods=['POST'])
 @login_required
@@ -1236,75 +1279,125 @@ def elimina_lavorazione(id):
         conn.close()
 
 # =====================================
-# PROMEMORIA (route corretta per url_for("promemoria"))
+# PROMEMORIA - GESTIONE WIDGET GLOBALE
 # =====================================
-@app.route('/promemoria', methods=['GET', 'POST'])
-@login_required
-def promemoria():
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    try:
-        if request.method == 'POST':
-            testo = request.form.get('testo')
-            if testo:
-                cur.execute("INSERT INTO promemoria (utente_id, testo, data_creazione) VALUES (%s,%s,%s)",
-                            (session['user_id'], testo, datetime.utcnow()))
-                conn.commit()
-                try:
-                    log_storico(session['user_id'], "Aggiunto promemoria", "promemoria", None)
-                except Exception:
-                    pass
-        if session.get('ruolo') == 'accettazione':
-            cur.execute("SELECT * FROM promemoria ORDER BY data_creazione DESC")
-        else:
-            cur.execute("SELECT * FROM promemoria WHERE utente_id=%s ORDER BY data_creazione DESC", (session['user_id'],))
-        promemoria_rows = cur.fetchall()
-    finally:
-        conn.close()
-
-    if request.args.get('ajax') in ['1', 'true']:
-        return jsonify(promemoria_rows)
-    return render_template('promemoria.html', promemoria=promemoria_rows)
-
-@app.route('/aggiungi_promemoria', methods=['POST'])
-@login_required
-def aggiungi_promemoria():
-    try:
-        dati = request.get_json()
-        titolo = dati.get('titolo')
-        info = dati.get('info')
-
-        if not titolo or not info:
-            return jsonify({"success": False, "message": "Titolo e informazioni obbligatori"}), 400
-
-        supabase.table('promemoria').insert({
-            "utente_id": session['user_id'],
-            "titolo": titolo,
-            "info": info,
-            "data_creazione": datetime.utcnow()
-        }).execute()
-
-        try:
-            log_storico(session['user_id'], f"Aggiunto promemoria: {titolo}", "promemoria", None)
-        except Exception:
-            pass
-
-        return jsonify({"success": True, "message": "Promemoria aggiunto correttamente"})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
 
 @app.route('/lista_promemoria', methods=['GET'])
 @login_required
 def lista_promemoria():
+    """
+    Restituisce in formato JSON la lista dei promemoria
+    visibili all'utente corrente (o a tutti se è accettazione).
+    """
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         if session.get('ruolo') == 'accettazione':
-            risultati = supabase.table('promemoria').select('*').order('data_creazione', desc=True).execute().data
+            cur.execute("""
+                SELECT id, titolo, info, data_creazione
+                FROM promemoria
+                ORDER BY data_creazione DESC
+            """)
         else:
-            risultati = supabase.table('promemoria').select('*').eq('utente_id', session['user_id']).order('data_creazione', desc=True).execute().data
+            cur.execute("""
+                SELECT id, titolo, info, data_creazione
+                FROM promemoria
+                WHERE utente_id = %s
+                ORDER BY data_creazione DESC
+            """, (session['user_id'],))
 
-        return jsonify({"success": True, "promemoria": risultati})
+        rows = cur.fetchall() or []
+
+        # Conversione date in formato leggibile
+        for r in rows:
+            r['data_creazione'] = (
+                r['data_creazione'].strftime('%Y-%m-%d %H:%M:%S')
+                if r.get('data_creazione') else ''
+            )
+
+        return jsonify(rows)
+
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        print("Errore caricamento promemoria:", e)
+        return jsonify([]), 500
+
+    finally:
+        conn.close()
+
+
+@app.route('/aggiungi_promemoria', methods=['POST'])
+@login_required
+def aggiungi_promemoria():
+    """
+    Aggiunge un nuovo promemoria al database tramite chiamata AJAX.
+    """
+    data = request.get_json(silent=True) or {}
+    titolo = data.get('testo', '').strip()
+    descrizione = data.get('descrizione', '').strip()
+
+    if not titolo:
+        return jsonify({'success': False, 'error': 'Titolo mancante'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            INSERT INTO promemoria (utente_id, titolo, info, data_creazione)
+            VALUES (%s, %s, %s, %s)
+        """, (session['user_id'], titolo, descrizione, datetime.utcnow()))
+        conn.commit()
+
+        # Log azione
+        try:
+            testo_log = f"Aggiunto promemoria: {titolo}"
+            if descrizione:
+                testo_log += f" ({descrizione[:50]}...)"
+            log_storico(session['user_id'], testo_log, "promemoria", None)
+        except Exception:
+            pass
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print("Errore salvataggio promemoria:", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()
+
+
+@app.route('/elimina_promemoria/<int:id>', methods=['POST'])
+@login_required
+def elimina_promemoria(id):
+    """
+    Elimina un promemoria (solo l'autore o l'accettazione può farlo).
+    """
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if session.get('ruolo') == 'accettazione':
+            cur.execute("DELETE FROM promemoria WHERE id = %s", (id,))
+        else:
+            cur.execute("""
+                DELETE FROM promemoria
+                WHERE id = %s AND utente_id = %s
+            """, (id, session['user_id']))
+        conn.commit()
+
+        # Log
+        try:
+            log_storico(session['user_id'], f"Eliminato promemoria ID {id}", "promemoria", None)
+        except Exception:
+            pass
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        print("Errore eliminazione promemoria:", e)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    finally:
+        conn.close()
 
 # =====================================
 # STORICO (route già definita con log_storico)
@@ -1312,22 +1405,49 @@ def lista_promemoria():
 @app.route('/storico')
 @login_required
 def storico():
+    conn = None
     try:
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT s.*, u.username FROM storico_azioni s LEFT JOIN utenti u ON s.utente_id = u.id ORDER BY s.data_ora DESC LIMIT 200")
-        storico_rows = cur.fetchall()
-    except Exception:
-        app.logger.exception("Errore nel recupero dello storico.")
+
+        cur.execute("""
+            SELECT 
+                s.id,
+                s.id_utente,
+                COALESCE(u.username, 'Sistema') AS username,
+                s.tabella_nome,
+                s.record_id,
+                s.azione,
+                s.data_ora
+            FROM storico_azioni s
+            LEFT JOIN utenti u ON s.id_utente = u.id
+            ORDER BY s.data_ora DESC
+            LIMIT 200
+        """)
+        storico_rows = cur.fetchall() or []
+
+    except Exception as e:
+        app.logger.exception(f"Errore nel recupero dello storico: {e}")
         storico_rows = []
     finally:
-        try:
+        if conn:
             conn.close()
-        except Exception:
-            pass
 
+    # --- Se richiesta AJAX, restituisci JSON ---
     if request.args.get('ajax') in ['1', 'true']:
-        return jsonify(storico_rows)
+        formatted = []
+        for row in storico_rows:
+            formatted.append({
+                'id': row.get('id'),
+                'username': row.get('username') or 'Sistema',
+                'tabella_nome': row.get('tabella_nome') or '',
+                'record_id': row.get('record_id') or '',
+                'azione': row.get('azione') or '',
+                'data_ora': row.get('data_ora').strftime('%Y-%m-%d %H:%M:%S') if row.get('data_ora') else ''
+            })
+        return jsonify(formatted)
+
+    # --- Rendering pagina dedicata ---
     return render_template('storico.html', storico=storico_rows)
 
 # =====================================
@@ -1335,4 +1455,4 @@ def storico():
 # =====================================
 if __name__ == '__main__':
     app.run(debug=True)
-
+    

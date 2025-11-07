@@ -1,0 +1,175 @@
+<!-- PROMEMORIA WIDGET (rifinito graficamente + titolo e descrizione) -->
+<style>
+  /* --- Pulsante principale sotto il quadrato lavorazioni --- */
+  #quadrato-promemoria {
+      position: fixed;
+      top: 180px;
+      left: 20px;
+      width: 60px;
+      height: 60px;
+      background: #add8e6;
+      color: white;
+      font-size: 28px;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
+      z-index: 2101;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s;
+  }
+
+  #quadrato-promemoria:hover {
+      transform: scale(1.05);
+      background: #7ec8e3;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  /* --- Popup promemoria --- */
+  #popup-promemoria {
+      display: none;
+      position: fixed;
+      top: 260px;
+      left: 20px;
+      width: 270px;
+      max-height: 350px;
+      overflow-y: auto;
+      background: #f9fcff;
+      border: 2px solid #add8e6;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      z-index: 2100;
+      animation: fadeIn 0.25s ease-out;
+      font-family: "Segoe UI", sans-serif;
+  }
+
+  #popup-promemoria h5 {
+      margin: 0;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #007BFF;
+      font-size: 16px;
+      font-weight: 600;
+  }
+
+  /* --- Pulsante + --- */
+  #aggiungi-promemoria {
+      background: #add8e6;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: all 0.2s ease;
+  }
+
+  #aggiungi-promemoria:hover {
+      background: #007BFF;
+      transform: scale(1.1);
+  }
+
+  /* --- Input e bottone Salva --- */
+  #form-promemoria input,
+  #form-promemoria textarea {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-top: 5px;
+  }
+
+  #form-promemoria textarea {
+      resize: vertical;
+      min-height: 50px;
+  }
+
+  #salva-promemoria {
+      margin-top: 6px;
+      width: 100%;
+      padding: 7px;
+      background: #add8e6;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s ease;
+  }
+
+  #salva-promemoria:hover {
+      background: #007BFF;
+  }
+
+  /* --- Lista promemoria --- */
+  #lista-promemoria li {
+      background: #eef6ff;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+      line-height: 1.3;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+  }
+
+  #lista-promemoria strong {
+      color: #007BFF;
+      display: block;
+      margin-bottom: 2px;
+  }
+
+  .elimina-promemoria {
+      background: transparent;
+      border: none;
+      color: #d9534f;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+  }
+
+  .elimina-promemoria:hover {
+      transform: scale(1.2);
+      color: #b52b27;
+  }
+
+  @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<!-- POPUP -->
+<div id="popup-promemoria">
+  <h5>
+      Promemoria
+      <button id="aggiungi-promemoria">+</button>
+  </h5>
+  <ul id="lista-promemoria" style="list-style:none; padding-left:0; margin:0;"></ul>
+  <div id="form-promemoria" style="display:none;">
+      <input type="text" id="titolo-promemoria" placeholder="Titolo...">
+      <textarea id="descrizione-promemoria" placeholder="Descrizione..."></textarea>
+      <button id="salva-promemoria">Salva</button>
+  </div>
+</div>
+
+<!-- QUADRATO PRINCIPALE -->
+<button id="quadrato-promemoria">📝</button>
+
+<!-- COLLEGAMENTO AL JS ESTERNO -->
+<script src="{{ url_for('static', filename='js/promemoria.js') }}"></script>

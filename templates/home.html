@@ -23,80 +23,14 @@
 </div>
 {% endif %}
 
-<!-- Popup Promemoria -->
-<div id="popup-promemoria" style="display:none; position:fixed; bottom:10px; right:10px; width:250px; max-height:350px; overflow-y:auto; background:#e6f0ff; border:1px solid #007BFF; padding:10px; border-radius:5px; box-shadow:0 0 10px rgba(0,0,0,0.2); z-index:100;">
-    <h5 style="margin-top:0; display:flex; justify-content:space-between; align-items:center;">
-        Promemoria
-        <button id="aggiungi-promemoria" style="background:#007BFF;color:white;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;">+</button>
-    </h5>
-    <ul id="lista-promemoria" style="list-style:none; padding-left:0;"></ul>
-    <div id="form-promemoria" style="display:none; margin-top:10px;">
-        <input type="text" id="nuovo-promemoria" placeholder="Nuovo promemoria" style="width:100%; padding:5px; border-radius:4px; border:1px solid #ccc;">
-        <button id="salva-promemoria" style="margin-top:5px; width:100%; padding:5px; background:#007BFF; color:white; border:none; border-radius:4px;">Salva</button>
-    </div>
-</div>
-
-<button id="quadrato-promemoria" style="position:fixed; bottom:10px; right:10px; width:40px; height:40px; background:#007BFF; color:white; border:none; border-radius:5px; cursor:pointer; z-index:101;">
-    📝
-</button>
-
 {% endif %}
 {% endblock %}
 
 {% block script %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // ---- PROMEMORIA ----
-    const quadProm = document.getElementById('quadrato-promemoria');
-    const popupProm = document.getElementById('popup-promemoria');
-    const listaProm = document.getElementById('lista-promemoria');
-    const btnAddProm = document.getElementById('aggiungi-promemoria');
-    const formProm = document.getElementById('form-promemoria');
-    const inputProm = document.getElementById('nuovo-promemoria');
-    const btnSalvaProm = document.getElementById('salva-promemoria');
-
-    quadProm.addEventListener('click', async () => {
-        popupProm.style.display = popupProm.style.display === 'none' || popupProm.style.display === '' ? 'block' : 'none';
-        if (popupProm.style.display === 'block') await caricaPromemoria();
-    });
-
-    btnAddProm.addEventListener('click', () => {
-        formProm.style.display = formProm.style.display === 'none' ? 'block' : 'none';
-        inputProm.focus();
-    });
-
-    btnSalvaProm.addEventListener('click', async () => {
-        const testo = inputProm.value.trim();
-        if (!testo) return;
-        try {
-            const res = await fetch('{{ url_for("aggiungi_promemoria") }}', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({testo})
-            });
-            if (res.ok) {
-                inputProm.value = '';
-                formProm.style.display = 'none';
-                await caricaPromemoria();
-            }
-        } catch(e) { alert('Errore nel salvataggio.'); }
-    });
-
-    async function caricaPromemoria() {
-        try {
-            const res = await fetch('{{ url_for("lista_promemoria") }}');
-            const data = await res.json();
-            listaProm.innerHTML = '';
-            if (data.length === 0) listaProm.innerHTML = '<li>Nessun promemoria</li>';
-            else data.forEach(item => {
-                const li = document.createElement('li');
-                li.textContent = item.testo;
-                listaProm.appendChild(li);
-            });
-        } catch {
-            listaProm.innerHTML = '<li>Errore nel caricamento</li>';
-        }
-    }
+    // Home non ha più riferimenti al quadrato-promemoria
+    // Se vuoi aggiungere logiche specifiche di home, inseriscile qui
 });
 </script>
 {% endblock %}

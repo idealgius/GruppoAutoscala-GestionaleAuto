@@ -22,7 +22,7 @@
         <input type="text" name="tipo_lavorazione" id="tipo_lavorazione" placeholder="Specifica la lavorazione">
     </div>
 
-    <!-- Cliente e Targa -->
+    <!-- Cliente, Targa e Numero Ordine -->
     <div style="margin-bottom:15px;">
         <label for="cliente_nome">Nome Cliente</label>
         <input type="text" name="cliente_nome" id="cliente_nome" placeholder="Inserisci nome cliente">
@@ -30,6 +30,10 @@
     <div style="margin-bottom:15px;">
         <label for="targa">Targa</label>
         <input type="text" name="targa" id="targa" placeholder="Inserisci targa">
+    </div>
+    <div style="margin-bottom:15px;">
+        <label for="ordine_riparazione">N° Ordine di Riparazione</label>
+        <input type="text" name="ordine_riparazione" id="ordine_riparazione" placeholder="Inserisci numero ordine">
     </div>
 
     <!-- Marca -->
@@ -98,15 +102,16 @@ document.getElementById('marca').addEventListener('change', function() {
     modelloSelect.value = "";
 });
 
-// --- CONTROLLO CLIENTE O TARGA ---
+// --- CONTROLLO CLIENTE, TARGA O NUMERO ORDINE ---
 document.querySelector("form").addEventListener("submit", function (e) {
     const nome = document.getElementById("cliente_nome").value.trim();
     const targa = document.getElementById("targa").value.trim();
+    const ordine = document.getElementById("ordine_riparazione").value.trim();
 
-    // deve esserci almeno uno tra nome e targa
-    if (!nome && !targa) {
+    // deve esserci almeno uno tra nome, targa o numero ordine
+    if (!nome && !targa && !ordine) {
         e.preventDefault();
-        alert("Devi inserire almeno il nome del cliente o la targa del veicolo.");
+        alert("Devi inserire almeno il nome del cliente, la targa del veicolo o il numero ordine di riparazione.");
         document.getElementById("cliente_nome").focus();
         return false;
     }
