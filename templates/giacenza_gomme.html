@@ -8,21 +8,39 @@
 {% set solo_lettura = session.get('ruolo') == 'accettazione' %}
 
 {% if gomme %}
-    <div style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
+    <!-- FILTRI -->
+    <div style="max-width:900px; margin:0 auto 20px auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+        <select id="filtro-marca">
+            <option value="">Tutte le marche</option>
+            {% for m in gomme|map(attribute='marca')|unique|sort %}
+                <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="filtro-misura">
+            <option value="">Tutte le misure</option>
+            {% for g in gomme %}
+                {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ 'R' ~ g.diametro %}
+                <option value="{{ misura }}">{{ misura }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
         {% for g in gomme %}
-        <div class="gomma-item" data-id="{{ g.id }}" style="padding:12px 15px; border-radius:8px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
+        <div class="gomma-item" data-id="{{ g.id }}" data-marca="{{ g.marca }}" data-misura="{{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }}"
+             style="padding:12px 15px; border-radius:8px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
             <div style="flex:1;">
-                <strong>{{ g.marca }}</strong> - 
-                {{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }} <br>
-                
+                <strong>{{ g.marca }}</strong> - {{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }} <br>
+
                 Prezzo unitario: 
                 <input type="text" value="{{ g.prezzo_unitario }}" class="prezzo-unitario" style="width:70px;"
                        {% if solo_lettura %}readonly{% endif %}> € - 
-                
+
                 Prezzo treno: 
                 <input type="text" value="{{ g.prezzo_treno }}" class="prezzo-treno" style="width:70px;"
                        {% if solo_lettura %}readonly{% endif %}> € <br>
-                
+
                 Disponibilità: 
                 <button class="dec-disponibilita" style="padding:2px 6px;" {% if solo_lettura %}disabled{% endif %}>-</button>
                 <span class="quantita">{{ g.disponibilita }}</span>
@@ -42,6 +60,26 @@
 {% endif %}
 
 <script>
+// --- FILTRI ---
+const filtroMarca = document.getElementById('filtro-marca');
+const filtroMisura = document.getElementById('filtro-misura');
+const listaGomme = document.getElementById('lista-gomme');
+
+function filtraGomme(){
+    const marca = filtroMarca.value;
+    const misura = filtroMisura.value;
+
+    document.querySelectorAll('.gomma-item').forEach(div=>{
+        const matchMarca = !marca || div.dataset.marca === marca;
+        const matchMisura = !misura || div.dataset.misura === misura;
+        div.style.display = (matchMarca && matchMisura) ? 'flex' : 'none';
+    });
+}
+
+if(filtroMarca) filtroMarca.addEventListener('change', filtraGomme);
+if(filtroMisura) filtroMisura.addEventListener('change', filtraGomme);
+
+// --- FUNZIONALITÀ SOLO SE NON SOLO_LETTURA ---
 {% if not solo_lettura %}
 document.querySelectorAll('.gomma-item').forEach(div => {
     const id = div.dataset.id;
@@ -69,19 +107,11 @@ document.querySelectorAll('.gomma-item').forEach(div => {
         formData.append("disponibilita", quantitaSpan.textContent);
 
         try {
-            const res = await fetch(`/modifica_gomma/${id}`, {
-                method: "POST",
-                body: formData
-            });
+            const res = await fetch(`/modifica_gomma/${id}`, { method: "POST", body: formData });
             if(res.ok){
                 alert("✅ Gomma aggiornata correttamente.");
-            } else {
-                alert("❌ Errore durante l'aggiornamento.");
-            }
-        } catch(e){
-            console.error(e);
-            alert("❌ Errore di comunicazione con il server.");
-        }
+            } else { alert("❌ Errore durante l'aggiornamento."); }
+        } catch(e){ console.error(e); alert("❌ Errore di comunicazione con il server."); }
     });
 
     // Elimina gomma tramite fetch al backend
@@ -93,13 +123,8 @@ document.querySelectorAll('.gomma-item').forEach(div => {
             if(res.ok){
                 div.remove();
                 alert("🗑️ Gomma eliminata correttamente.");
-            } else {
-                alert("❌ Errore durante l'eliminazione.");
-            }
-        } catch(e){
-            console.error(e);
-            alert("❌ Errore di comunicazione con il server.");
-        }
+            } else { alert("❌ Errore durante l'eliminazione."); }
+        } catch(e){ console.error(e); alert("❌ Errore di comunicazione con il server."); }
     });
 });
 {% endif %}
