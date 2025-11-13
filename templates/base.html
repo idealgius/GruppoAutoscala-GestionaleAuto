@@ -141,7 +141,15 @@
 </head>
 <body>
 <header>
-    <a href="{{ url_for('home') }}">
+    {% if session.get('ruolo') == 'accettazione' %}
+        <a href="{{ url_for('home') }}">
+    {% elif session.get('ruolo') == 'officina' %}
+        <a href="{{ url_for('home_officina') }}">
+    {% elif session.get('ruolo') == 'officina_gomme' %}
+        <a href="{{ url_for('home_officina_gomme') }}">
+    {% else %}
+        <a href="{{ url_for('scelta_login') }}">
+    {% endif %}
         <img src="{{ url_for('static', filename='logo.26861.png') }}" alt="Logo Gruppo AutoscalA">
     </a>
 </header>
@@ -155,6 +163,7 @@
             <a href="{{ url_for('inserisci_vettura') }}">➕ Inserisci Vettura</a>
             <a href="{{ url_for('lista_modelli') }}">🛠️ Modelli</a>
             <a href="{{ url_for('lista_ricambi') }}">🔧 Ricambi</a>
+            <a href="{{ url_for('giacenza_gomme') }}" title="Giacenza Gomme">🛞 Giacenza Gomme</a>
         {% endif %}
         <a href="{{ url_for('logout') }}">🔒 Logout ({{ session['username'] }})</a>
     {% else %}

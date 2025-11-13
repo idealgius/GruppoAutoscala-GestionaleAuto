@@ -1,17 +1,17 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-import os
-import json
-import hashlib
-from functools import wraps
-from datetime import datetime
-from zoneinfo import ZoneInfo            # per gestire il fuso orario Europe/Rome
+from flask import request, redirect, url_for, session
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from datetime import datetime
+import hashlib
+from functools import wraps
+import json
 
 # =====================================
-# CONFIG / Fuso orario
+# CONFIG
 # =====================================
-FUSO_ITALIA = ZoneInfo("Europe/Rome")
+import os
+from flask import Flask
 
 app = Flask(__name__)
 
@@ -222,10 +222,12 @@ def registra_azione_username(username, azione, dettagli):
 def scelta_login():
     return render_template('login_selezione.html')
 
+
 @app.route('/login', defaults={'ruolo': None}, methods=['GET', 'POST'])
 @app.route('/login/<ruolo>', methods=['GET', 'POST'])
 def login(ruolo):
     ruolo_input = (ruolo or request.form.get('ruolo') or request.args.get('ruolo') or '').strip().lower()
+    
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
@@ -278,17 +280,23 @@ def login(ruolo):
         except Exception:
             pass
 
+        # Gestione ruoli
         if user_role == 'officina':
             return redirect(url_for('home_officina'))
         elif user_role == 'accettazione':
             return redirect(url_for('home'))
+        elif user_role == 'officina_gomme':
+            return redirect(url_for('home_officina_gomme'))
         else:
             flash("Ruolo non riconosciuto.")
             return redirect(url_for('scelta_login'))
 
+    # Se nessun ruolo selezionato
     if not ruolo_input:
         return redirect(url_for('scelta_login'))
+    
     return render_template('login.html', ruolo=ruolo_input)
+
 
 @app.route('/logout')
 @login_required
@@ -1277,6 +1285,141 @@ def elimina_lavorazione(id):
     finally:
         cur.close()
         conn.close()
+# ===============================
+# ROUTE OFFICINA GOMME AGGIORNATE
+# ===============================
+
+@app.route("/home_officina_gomme")
+@login_required
+def home_officina_gomme():
+    if session.get('ruolo') != 'officina_gomme':
+        flash("Accesso negato: non hai i permessi per questa sezione.")
+        return redirect(url_for('scelta_login'))
+
+    nome_reale = session.get('username', 'Utente')
+    return render_template("home_officina_gomme.html", nome_reale=nome_reale)
+
+
+@app.route("/inserisci_gomme", methods=["GET", "POST"])
+@login_required
+def inserisci_gomme():
+    if session.get('ruolo') != 'officina_gomme':
+        flash("Accesso negato.")
+        return redirect(url_for('scelta_login'))
+
+    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Ling Long", "Michelin", "Pirelli"]
+    marche.sort()
+
+    if request.method == "POST":
+        try:
+            marca = request.form.get("marca")
+            larghezza = int(request.form.get("larghezza") or 0)
+            rapporto = int(request.form.get("rapporto") or 0)
+            diametro = int(request.form.get("diametro") or 0)
+            # Gestione prezzi italiani con la virgola
+            prezzo_unitario = float(request.form.get("prezzo_unitario", "0").replace(",", "."))
+            prezzo_treno = float(request.form.get("prezzo_treno", "0").replace(",", "."))
+            disponibilita = int(request.form.get("disponibilita") or 0)
+
+            conn = get_db_connection()
+            cur = conn.cursor()
+
+            cur.execute("""
+                INSERT INTO gomme (marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (marca, larghezza, rapporto, diametro) DO UPDATE
+                SET prezzo_unitario = EXCLUDED.prezzo_unitario,
+                    prezzo_treno = EXCLUDED.prezzo_treno,
+                    disponibilita = EXCLUDED.disponibilita
+            """, (marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            flash("✅ Gomme inserite o aggiornate con successo!")
+            return redirect(url_for("giacenza_gomme"))
+
+        except Exception as e:
+            app.logger.error(f"Errore durante l'inserimento gomme: {e}")
+            flash("❌ Errore durante l'inserimento delle gomme. Controlla i dati inseriti.")
+            return redirect(url_for("inserisci_gomme"))
+
+    return render_template("inserisci_gomme.html", marche=marche)
+
+
+@app.route("/giacenza_gomme")
+@login_required
+def giacenza_gomme():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("""
+            SELECT id, marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita
+            FROM gomme
+            ORDER BY marca, larghezza, rapporto, diametro
+        """)
+        gomme = cur.fetchall()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        app.logger.error(f"Errore nel caricamento giacenza gomme: {e}")
+        gomme = []
+        flash("❌ Errore nel recupero della giacenza gomme.")
+
+    return render_template("giacenza_gomme.html", gomme=gomme)
+
+
+@app.route("/modifica_gomma/<int:id>", methods=["POST"])
+@login_required
+def modifica_gomma(id):
+    if session.get('ruolo') != 'officina_gomme':
+        flash("Accesso negato.")
+        return redirect(url_for('scelta_login'))
+
+    try:
+        prezzo_unitario = float(request.form.get("prezzo_unitario", "0").replace(",", "."))
+        prezzo_treno = float(request.form.get("prezzo_treno", "0").replace(",", "."))
+        disponibilita = int(request.form.get("disponibilita", "0"))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE gomme
+            SET prezzo_unitario=%s, prezzo_treno=%s, disponibilita=%s
+            WHERE id=%s
+        """, (prezzo_unitario, prezzo_treno, disponibilita, id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("✅ Gomma aggiornata correttamente.")
+    except Exception as e:
+        app.logger.error(f"Errore modifica gomma: {e}")
+        flash("❌ Errore durante la modifica.")
+
+    return redirect(url_for("giacenza_gomme"))
+
+
+@app.route("/elimina_gomma/<int:id>", methods=["POST"])
+@login_required
+def elimina_gomma(id):
+    if session.get('ruolo') != 'officina_gomme':
+        flash("Accesso negato.")
+        return redirect(url_for('scelta_login'))
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM gomme WHERE id=%s", (id,))
+        conn.commit()
+        cur.close()
+        conn.close()
+        flash("🗑️ Gomma eliminata correttamente.")
+    except Exception as e:
+        app.logger.error(f"Errore eliminazione gomma: {e}")
+        flash("❌ Errore durante l'eliminazione.")
+
+    return redirect(url_for("giacenza_gomme"))
 
 # =====================================
 # PROMEMORIA - GESTIONE WIDGET GLOBALE

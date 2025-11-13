@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Gomme{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; color:#004080; margin-bottom:30px;">➕ Inserisci Gomme</h1>
+
+<form id="form-inserisci-gomme" method="POST" action="{{ url_for('inserisci_gomme') }}"
+      style="max-width:500px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
+    
+    <!-- Marca -->
+    <label for="marca">Marca:</label>
+    <select id="marca" name="marca" required>
+        <option value="">-- Seleziona marca --</option>
+        {% for marca in marche|sort %}
+            <option value="{{ marca }}">{{ marca }}</option>
+        {% endfor %}
+    </select>
+
+    <!-- Larghezza -->
+    <label for="larghezza">Larghezza:</label>
+    <input type="text" id="larghezza" name="larghezza" minlength="3" maxlength="3" pattern="\d{3}" required placeholder="Esempio: 205">
+
+    <!-- Rapporto d'aspetto -->
+    <label for="rapporto">Rapporto d'aspetto:</label>
+    <input type="text" id="rapporto" name="rapporto" minlength="2" maxlength="3" pattern="\d{2,3}" required placeholder="Esempio: 55">
+
+    <!-- Diametro -->
+    <label for="diametro">Diametro:</label>
+    <input type="text" id="diametro" name="diametro" minlength="2" maxlength="2" pattern="\d{2}" required placeholder="Esempio: 16">
+
+    <!-- Prezzo unitario -->
+    <label for="prezzo_unitario">Prezzo unitario (€):</label>
+    <input type="text" id="prezzo_unitario" name="prezzo_unitario" pattern="\d{1,3},\d{2}" required placeholder="Esempio: 150,00">
+
+    <!-- Prezzo Treno -->
+    <label for="prezzo_treno">Prezzo Treno (€):</label>
+    <input type="text" id="prezzo_treno" name="prezzo_treno" pattern="\d{1,3},\d{2}" required placeholder="Esempio: 600,00">
+
+    <!-- Disponibilità iniziale -->
+    <label for="disponibilita">Disponibilità iniziale:</label>
+    <input type="number" id="disponibilita" name="disponibilita" min="0" max="99" required placeholder="Esempio: 10">
+
+    <button type="submit" style="padding:10px 20px; background:#007BFF; color:white; border:none; border-radius:6px; cursor:pointer;">
+        Salva Gomme
+    </button>
+</form>
+
+<script>
+document.getElementById('form-inserisci-gomme').addEventListener('submit', function(e){
+    const prezzoUnit = document.getElementById('prezzo_unitario').value;
+    const prezzoTreno = document.getElementById('prezzo_treno').value;
+    const prezzoPattern = /^\d{1,3},\d{2}$/;
+
+    if(!prezzoPattern.test(prezzoUnit) || !prezzoPattern.test(prezzoTreno)){
+        alert("I prezzi devono avere il formato corretto: 00,00 o 000,00");
+        e.preventDefault();
+        return;
+    }
+
+    // Converti in formato compatibile con Python (virgola -> punto)
+    document.getElementById('prezzo_unitario').value = prezzoUnit.replace(',', '.');
+    document.getElementById('prezzo_treno').value = prezzoTreno.replace(',', '.');
+});
+</script>
+{% endblock %}

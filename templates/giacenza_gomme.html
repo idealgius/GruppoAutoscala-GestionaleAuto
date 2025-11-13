@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Giacenza Gomme{% endblock %}
+
+{% block content %}
+<h1 style="text-align:center; color:#004080; margin-bottom:30px;">📦 Giacenza Gomme</h1>
+
+{% set solo_lettura = session.get('ruolo') == 'accettazione' %}
+
+{% if gomme %}
+    <div style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
+        {% for g in gomme %}
+        <div class="gomma-item" data-id="{{ g.id }}" style="padding:12px 15px; border-radius:8px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <div style="flex:1;">
+                <strong>{{ g.marca }}</strong> - 
+                {{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }} <br>
+                
+                Prezzo unitario: 
+                <input type="text" value="{{ g.prezzo_unitario }}" class="prezzo-unitario" style="width:70px;"
+                       {% if solo_lettura %}readonly{% endif %}> € - 
+                
+                Prezzo treno: 
+                <input type="text" value="{{ g.prezzo_treno }}" class="prezzo-treno" style="width:70px;"
+                       {% if solo_lettura %}readonly{% endif %}> € <br>
+                
+                Disponibilità: 
+                <button class="dec-disponibilita" style="padding:2px 6px;" {% if solo_lettura %}disabled{% endif %}>-</button>
+                <span class="quantita">{{ g.disponibilita }}</span>
+                <button class="inc-disponibilita" style="padding:2px 6px;" {% if solo_lettura %}disabled{% endif %}>+</button>
+            </div>
+            <div>
+                {% if not solo_lettura %}
+                <button class="save-gomma" style="margin-left:10px; padding:5px 10px; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer;">💾 Salva</button>
+                <button class="delete-gomma" style="margin-left:10px; padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer;">❌ Elimina</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <p style="text-align:center; color:#666;">Nessuna gomma inserita.</p>
+{% endif %}
+
+<script>
+{% if not solo_lettura %}
+document.querySelectorAll('.gomma-item').forEach(div => {
+    const id = div.dataset.id;
+    const quantitaSpan = div.querySelector('.quantita');
+    const inputUnit = div.querySelector('.prezzo-unitario');
+    const inputTreno = div.querySelector('.prezzo-treno');
+
+    // Incrementa quantità
+    div.querySelector('.inc-disponibilita').addEventListener('click', () => {
+        let val = parseInt(quantitaSpan.textContent);
+        quantitaSpan.textContent = val + 1;
+    });
+
+    // Decrementa quantità
+    div.querySelector('.dec-disponibilita').addEventListener('click', () => {
+        let val = parseInt(quantitaSpan.textContent);
+        if(val > 0) quantitaSpan.textContent = val - 1;
+    });
+
+    // Salva modifiche tramite fetch al backend
+    div.querySelector('.save-gomma').addEventListener('click', async () => {
+        const formData = new FormData();
+        formData.append("prezzo_unitario", inputUnit.value);
+        formData.append("prezzo_treno", inputTreno.value);
+        formData.append("disponibilita", quantitaSpan.textContent);
+
+        try {
+            const res = await fetch(`/modifica_gomma/${id}`, {
+                method: "POST",
+                body: formData
+            });
+            if(res.ok){
+                alert("✅ Gomma aggiornata correttamente.");
+            } else {
+                alert("❌ Errore durante l'aggiornamento.");
+            }
+        } catch(e){
+            console.error(e);
+            alert("❌ Errore di comunicazione con il server.");
+        }
+    });
+
+    // Elimina gomma tramite fetch al backend
+    div.querySelector('.delete-gomma').addEventListener('click', async () => {
+        if(!confirm('Sei sicuro di voler eliminare questa gomma?')) return;
+
+        try {
+            const res = await fetch(`/elimina_gomma/${id}`, { method: "POST" });
+            if(res.ok){
+                div.remove();
+                alert("🗑️ Gomma eliminata correttamente.");
+            } else {
+                alert("❌ Errore durante l'eliminazione.");
+            }
+        } catch(e){
+            console.error(e);
+            alert("❌ Errore di comunicazione con il server.");
+        }
+    });
+});
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Officina Gomme{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px; margin:0 auto; text-align:center; padding:40px 20px;">
+
+    <h1 style="color:#004080; font-size:2.2em; font-weight:600; margin-bottom:15px;">
+        Officina Gomme
+    </h1>
+    <p style="font-size:1.1em; color:#555; margin-bottom:50px;">
+        Benvenuto, <strong>{{ username }}</strong>!<br>
+        Seleziona un'operazione da eseguire.
+    </p>
+
+    <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:30px;">
+        
+        <!-- CARD: Inserisci Gomme -->
+        <a href="{{ url_for('inserisci_gomme') }}" 
+           style="flex:1 1 280px; max-width:320px; text-decoration:none;">
+            <div style="background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);
+                        padding:30px 20px; transition:transform 0.2s, box-shadow 0.2s;">
+                <div style="font-size:2em; margin-bottom:10px;">➕</div>
+                <h3 style="color:#004080; margin-bottom:10px;">Inserisci Gomme</h3>
+                <p style="color:#666; font-size:0.95em;">
+                    Aggiungi un nuovo treno di gomme nel sistema.
+                </p>
+            </div>
+        </a>
+
+        <!-- CARD: Giacenza Gomme -->
+        <a href="{{ url_for('giacenza_gomme') }}" 
+           style="flex:1 1 280px; max-width:320px; text-decoration:none;">
+            <div style="background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);
+                        padding:30px 20px; transition:transform 0.2s, box-shadow 0.2s;">
+                <div style="font-size:2em; margin-bottom:10px;">📦</div>
+                <h3 style="color:#004080; margin-bottom:10px;">Giacenza Gomme</h3>
+                <p style="color:#666; font-size:0.95em;">
+                    Visualizza le gomme attualmente in magazzino.
+                </p>
+            </div>
+        </a>
+
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('a div').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+        card.style.transform = 'scale(1.03)';
+        card.style.boxShadow = '0 6px 14px rgba(0,0,0,0.15)';
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'scale(1)';
+        card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
+    });
+});
+</script>
+{% endblock %}

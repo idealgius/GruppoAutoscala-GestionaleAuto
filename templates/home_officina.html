@@ -26,19 +26,32 @@
         {% set colore = lav.colore if lav.colore else '#f2f2f2' %}
         {% set tipo = lav.tipo if lav.tipo else 'Lavorazione' %}
         {% set stato = lav.stato if lav.stato else '-' %}
-        <div class="lavorazione" style="background-color: {{ colore }}; padding:15px; margin:10px; border-radius:8px; width:300px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onclick="toggleDettaglio({{ lav.id }})">
+        <div class="lavorazione" style="background-color: {{ colore }}; padding:15px; margin:10px; border-radius:8px; width:320px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onclick="toggleDettaglio({{ lav.id }})">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <strong>{{ tipo }}</strong>
                 <span style="font-size:0.9em; font-weight:bold;">Stato: {{ stato }}</span>
             </div>
-            <div id="dettaglio-{{ lav.id }}" style="display:none; margin-top:10px; font-size:0.95em; line-height:1.4;">
-                Marca: {{ lav.marca or '-' }} <br>
-                Modello: {{ lav.modello or '-' }} <br>
-                Cilindrata: {{ lav.cilindrata or '-' }} <br>
-                KW: {{ lav.kw or '-' }} <br>
-                Anno: {{ lav.anno or '-' }} <br>
-                {% if lav.note %}Note: {{ lav.note }}<br>{% endif %}
-                {% if lav.cliente_nome %}Cliente: {{ lav.cliente_nome }}{% endif %}
+
+            <div id="dettaglio-{{ lav.id }}" style="display:none; margin-top:10px; font-size:0.95em; line-height:1.5; background:white; padding:10px; border-radius:6px; box-shadow: inset 0 0 4px rgba(0,0,0,0.1);">
+                <p><strong>N° Ordine:</strong> {{ lav.id or '-' }}</p>
+                <p><strong>Tipo:</strong> {{ lav.tipo or '-' }}</p>
+                <p><strong>Marca:</strong> {{ lav.marca or '-' }}</p>
+                <p><strong>Modello:</strong> {{ lav.modello or '-' }}</p>
+                <p><strong>Cilindrata:</strong> {{ lav.cilindrata or '-' }}</p>
+                <p><strong>KW:</strong> {{ lav.kw or '-' }}</p>
+                <p><strong>Anno:</strong> {{ lav.anno or '-' }}</p>
+                <p><strong>Nome cliente:</strong> {{ lav.cliente_nome or '-' }}</p>
+                <p><strong>Cognome cliente:</strong> {{ lav.cliente_cognome or '-' }}</p>
+                <p><strong>Targa:</strong> {{ lav.targa or '-' }}</p>
+                <p><strong>Descrizione:</strong> {{ lav.descrizione or '-' }}</p>
+                <p><strong>Note:</strong> {{ lav.note or '-' }}</p>
+                <p><strong>Data creazione:</strong> 
+                    {% if lav.data_creazione %}
+                        {{ lav.data_creazione.strftime('%d/%m/%Y %H:%M') }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </p>
             </div>
         </div>
     {% else %}
