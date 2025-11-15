@@ -23,17 +23,24 @@
 <h2 style="text-align:center; margin-top:40px;">Le tue lavorazioni</h2>
 <div id="lavorazioni-container" style="display:flex; flex-wrap:wrap; justify-content:center;">
     {% for lav in lavorazioni %}
-        {% set colore = lav.colore if lav.colore else '#f2f2f2' %}
         {% set tipo = lav.tipo if lav.tipo else 'Lavorazione' %}
-        {% set stato = lav.stato if lav.stato else '-' %}
-        <div class="lavorazione" style="background-color: {{ colore }}; padding:15px; margin:10px; border-radius:8px; width:320px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onclick="toggleDettaglio({{ lav.id }})">
+        {% set stato = lav.stato if lav.stato else 'ordine inviato' %}
+
+        {# Calcolo colore in base allo stato #}
+        {% set colore = '#ffffff' %}
+        {% if stato == 'ordine inviato' %} {% set colore = '#fff3cd' %} {% endif %}
+        {% if stato == 'in lavorazione' %} {% set colore = '#cce5ff' %} {% endif %}
+        {% if stato == 'attesa del levabolle' %} {% set colore = '#d1d1d1' %} {% endif %}
+        {% if stato == 'completata' %} {% set colore = '#c8f7c5' %} {% endif %}
+
+        <div class="lavorazione" id="lav-card-{{ lav.id }}" style="background-color: {{ colore }}; padding:15px; margin:10px; border-radius:8px; width:320px; cursor:pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.1); transition: transform 0.2s;" onclick="toggleDettaglio({{ lav.id }})">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <strong>{{ tipo }}</strong>
-                <span style="font-size:0.9em; font-weight:bold;">Stato: {{ stato }}</span>
+                <span style="font-size:0.9em; font-weight:bold;">Stato: <span id="stato-{{ lav.id }}">{{ stato }}</span></span>
             </div>
 
             <div id="dettaglio-{{ lav.id }}" style="display:none; margin-top:10px; font-size:0.95em; line-height:1.5; background:white; padding:10px; border-radius:6px; box-shadow: inset 0 0 4px rgba(0,0,0,0.1);">
-                <p><strong>N° Ordine:</strong> {{ lav.id or '-' }}</p>
+                <p><strong>N° Ordine di Riparazione:</strong> {{ lav.ordine_riparazione or '-' }}</p>
                 <p><strong>Tipo:</strong> {{ lav.tipo or '-' }}</p>
                 <p><strong>Marca:</strong> {{ lav.marca or '-' }}</p>
                 <p><strong>Modello:</strong> {{ lav.modello or '-' }}</p>
@@ -46,12 +53,23 @@
                 <p><strong>Descrizione:</strong> {{ lav.descrizione or '-' }}</p>
                 <p><strong>Note:</strong> {{ lav.note or '-' }}</p>
                 <p><strong>Data creazione:</strong> 
-                    {% if lav.data_creazione %}
-                        {{ lav.data_creazione.strftime('%d/%m/%Y %H:%M') }}
-                    {% else %}
-                        -
-                    {% endif %}
+                    {% if lav.data_creazione %} {{ lav.data_creazione.strftime('%d/%m/%Y %H:%M') }} {% else %} - {% endif %}
                 </p>
+
+                <!-- BOTTONI STATO OFFICINA -->
+                <div style="margin-top:10px; display:flex; gap:10px;">
+                    {% if stato != 'completata' %}
+                        <button class="btn btn-secondary btn-sm btn-bolle"
+                            {% if stato == 'attesa del levabolle' %}style="display:none"{% endif %}
+                            onclick="aggiornaStato({{ lav.id }}, 'attesa del levabolle')">Bolle ⚙️</button>
+
+                        <button class="btn btn-success btn-sm btn-completata"
+                            {% if stato == 'completata' %}style="display:none"{% endif %}
+                            onclick="aggiornaStato({{ lav.id }}, 'completata')">Completata ✅</button>
+                    {% else %}
+                        <span style="font-size:0.9em; color:#555;">Lavorazione completata</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     {% else %}
@@ -70,6 +88,54 @@ function toggleDettaglio(id) {
         card.style.transform = 'scale(1.03)';
         setTimeout(() => { card.style.transform = 'scale(1)'; }, 200);
     }
+}
+
+function aggiornaStato(id, nuovoStato) {
+    fetch(`/officina/aggiorna_stato/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stato: nuovoStato })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const statoSpan = document.getElementById('stato-' + id);
+            statoSpan.textContent = data.nuovo_stato;
+
+            const card = document.getElementById('lav-card-' + id);
+            let colore = '#ffffff';
+
+            switch(data.nuovo_stato) {
+                case 'ordine inviato': colore = '#fff3cd'; break;
+                case 'in lavorazione': colore = '#cce5ff'; break;
+                case 'attesa del levabolle': colore = '#d1d1d1'; break;
+                case 'completata': colore = '#c8f7c5'; break;
+            }
+
+            const btnBolle = card.querySelector(".btn-bolle");
+            const btnCompleta = card.querySelector(".btn-completata");
+
+            if (data.nuovo_stato === 'attesa del levabolle') {
+                if (btnBolle) btnBolle.style.display = 'none';
+                if (btnCompleta) btnCompleta.style.display = 'inline-block';
+            } 
+            else if (data.nuovo_stato === 'completata') {
+                if (btnBolle) btnBolle.style.display = 'none';
+                if (btnCompleta) btnCompleta.style.display = 'none';
+            } 
+            else {
+                if (btnBolle) btnBolle.style.display = 'inline-block';
+                if (btnCompleta) btnCompleta.style.display = 'inline-block';
+            }
+
+        } else {
+            alert('Errore aggiornando lo stato: ' + data.message);
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Errore di rete durante aggiornamento stato.');
+    });
 }
 </script>
 {% endif %}

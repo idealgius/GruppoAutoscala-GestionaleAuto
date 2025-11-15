@@ -39,9 +39,9 @@
         <h5>Promemoria</h5>
         <div id="promemoria-list">
             {% for prom in promemoria %}
-            <div class="promemoria-item">{{ prom.testo }}</div>
+                <div class="promemoria-item">{{ prom.testo }}</div>
             {% else %}
-            <div class="promemoria-item">Nessun promemoria</div>
+                <div class="promemoria-item">Nessun promemoria</div>
             {% endfor %}
         </div>
         <button id="aggiungi-promemoria" class="btn btn-sm btn-primary mt-auto">+ Nuovo</button>
@@ -53,31 +53,38 @@
         <hr>
 
         {% for lav in lavorazioni %}
-        <div class="card card-lavorazione" style="background-color: {{ lav.colore or '#fff' }}">
-            <div class="card-body">
-                <h5 class="card-title">{{ lav.marca }} {{ lav.modello }} - {{ lav.anno or 'N/A' }}</h5>
-                <p class="card-text">
-                    <strong>ID:</strong> {{ lav.id }} |
-                    <strong>Cliente:</strong> {{ lav.cliente_nome or 'Non specificato' }} |
-                    <strong>Cilindrata:</strong> {{ lav.cilindrata or 'N/A' }} |
-                    <strong>KW:</strong> {{ lav.kw or 'N/A' }} |
-                    <strong>Tagliando:</strong> {{ 'Sì' if lav.tagliando else 'No' }}
-                </p>
-                <p>
-                    <span class="stato-badge" style="background-color: rgba(0,0,0,0.1)">{{ lav.stato }}</span>
-                </p>
-                <form method="POST" action="{{ url_for('aggiorna_stato_lavorazione', id=lav.id) }}" class="d-flex gap-2">
-                    <select name="stato" class="form-select form-select-sm" style="width: auto;">
-                        <option value="ordine inviato" {% if lav.stato=='ordine inviato' %}selected{% endif %}>Ordine inviato</option>
-                        <option value="in lavorazione" {% if lav.stato=='in lavorazione' %}selected{% endif %}>In lavorazione</option>
-                        <option value="completato" {% if lav.stato=='completato' %}selected{% endif %}>Completato</option>
-                    </select>
-                    <button type="submit" class="btn btn-primary btn-sm">Aggiorna</button>
-                </form>
+            {% set colore = '#fff' %}
+            {% if lav.stato == 'ordine inviato' %} {% set colore = '#fff3cd' %} {% endif %}
+            {% if lav.stato == 'in lavorazione' %} {% set colore = '#cce5ff' %} {% endif %}
+            {% if lav.stato == 'attesa del levabolle' %} {% set colore = '#d1d1d1' %} {% endif %}
+            {% if lav.stato == 'completata' %} {% set colore = '#c8f7c5' %} {% endif %}
+
+            <div class="card card-lavorazione" style="background-color: {{ colore }}">
+                <div class="card-body">
+                    <h5 class="card-title">{{ lav.marca }} {{ lav.modello }} - {{ lav.anno or 'N/A' }}</h5>
+                    <p class="card-text">
+                        <strong>N° Ordine di Riparazione:</strong> {{ lav.ordine_riparazione or '-' }}<br>
+                        <strong>Cliente:</strong> {{ lav.cliente_nome or 'Non specificato' }}<br>
+                        <strong>Cilindrata:</strong> {{ lav.cilindrata or 'N/A' }}<br>
+                        <strong>KW:</strong> {{ lav.kw or 'N/A' }}<br>
+                        <strong>Tagliando:</strong> {{ 'Sì' if lav.tagliando else 'No' }}
+                    </p>
+                    <p>
+                        <span class="stato-badge" style="background-color: rgba(0,0,0,0.1)">{{ lav.stato }}</span>
+                    </p>
+                    <form method="POST" action="{{ url_for('aggiorna_stato_lavorazione', id=lav.id) }}" class="d-flex gap-2">
+                        <select name="stato" class="form-select form-select-sm" style="width: auto;">
+                            <option value="ordine inviato" {% if lav.stato=='ordine inviato' %}selected{% endif %}>Ordine inviato</option>
+                            <option value="in lavorazione" {% if lav.stato=='in lavorazione' %}selected{% endif %}>In lavorazione</option>
+                            <option value="attesa del levabolle" {% if lav.stato=='attesa del levabolle' %}selected{% endif %}>Attesa del levabolle</option>
+                            <option value="completata" {% if lav.stato=='completata' %}selected{% endif %}>Completata</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm">Aggiorna</button>
+                    </form>
+                </div>
             </div>
-        </div>
         {% else %}
-        <p>Nessuna lavorazione presente.</p>
+            <p>Nessuna lavorazione presente.</p>
         {% endfor %}
     </div>
 

@@ -970,6 +970,7 @@ def ajax_lavorazioni():
                 WHERE id_officina = %s AND COALESCE(eliminata, false) = false
                 ORDER BY data_creazione DESC
             """, (user_id,))
+        
         elif ruolo == 'accettazione':
             cur.execute("""
                 SELECT id, data_creazione, tipo, 
@@ -988,7 +989,7 @@ def ajax_lavorazioni():
                        COALESCE(note,'') AS note
                 FROM lavorazioni
                 WHERE COALESCE(eliminata, false) = false
-                  AND TRIM(stato) IN ('ordine inviato', 'in lavorazione', 'completata')
+                  AND TRIM(stato) IN ('ordine inviato', 'in lavorazione', 'completata', 'attesa del levabolle')
                 ORDER BY data_creazione DESC
             """)
         else:
@@ -1116,7 +1117,6 @@ def inserisci_lavorazione():
 
     return render_template('inserisci_lavorazione.html', marche=marche, modelli=modelli)
 
-
 @app.route('/accettazione/aggiorna_stato/<int:id>', methods=['POST'])
 @login_required
 def accettazione_aggiorna_stato(id):
@@ -1128,8 +1128,8 @@ def accettazione_aggiorna_stato(id):
     data = request.get_json(silent=True) or {}
     nuovo_stato = (data.get('stato') or '').replace('_', ' ').lower().strip()
 
-    # ✅ Stati ammessi
-    stati_validi = ['ordine inviato', 'in lavorazione', 'completata']
+    # ✅ Stati ammessi, incluso "attesa del levabolle"
+    stati_validi = ['ordine inviato', 'in lavorazione', 'completata', 'attesa del levabolle']
     if nuovo_stato not in stati_validi:
         app.logger.warning(f"Stato non valido ricevuto: '{nuovo_stato}'")
         return jsonify({"success": False, "message": "Stato non valido."}), 400
@@ -1162,7 +1162,6 @@ def accettazione_aggiorna_stato(id):
 
     # ✅ Tutto ok → rispondi al frontend
     return jsonify({"success": True, "nuovo_stato": nuovo_stato})
-
 
 @app.route('/dettagli_lavorazione/<int:id>', methods=['GET'])
 @login_required
@@ -1238,6 +1237,64 @@ def lavorazioni_officina():
             conn.close()
 
         return render_template('lavorazioni.html', lavorazioni=lavorazioni_list, ruolo='officina')
+from flask import request, jsonify
+
+@app.route('/accettazione/modifica_lavorazione/<int:id>', methods=['POST'])
+def modifica_lavorazione(id):
+    # Controllo ruolo
+    if 'ruolo' not in session or session['ruolo'] != 'accettazione':
+        return jsonify({'success': False, 'error': 'Accesso negato'}), 403
+
+    # Recupero dati dal JSON inviato
+    dati = request.get_json()
+    if not dati:
+        return jsonify({'success': False, 'error': 'Dati mancanti'}), 400
+
+    # Campi opzionali consentiti alla modifica
+    campi_modificabili = ['ordine_riparazione','cliente_nome','targa','descrizione','note']
+
+    set_clause = []
+    values = []
+    for campo in campi_modificabili:
+        if campo in dati:
+            set_clause.append(f"{campo} = %s")
+            values.append(dati[campo])
+
+    if not set_clause:
+        return jsonify({'success': False, 'error': 'Nessun campo modificabile fornito'}), 400
+
+    values.append(id)  # id per WHERE
+
+    query = f"UPDATE lavorazioni SET {', '.join(set_clause)} WHERE id = %s"
+
+    conn = None
+    try:
+        # Connessione al DB usando variabili .env
+        conn = psycopg2.connect(
+            dbname=os.environ.get('DB_NAME'),
+            user=os.environ.get('DB_USER'),
+            password=os.environ.get('DB_PASSWORD'),
+            host=os.environ.get('DB_HOST'),
+            port=os.environ.get('DB_PORT'),
+            cursor_factory=RealDictCursor
+        )
+
+        cur = conn.cursor()
+        cur.execute(query, values)
+
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Lavorazione non trovata'}), 404
+
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+            conn.close()
+        return jsonify({'success': False, 'error': str(e)})
 
 # =====================================
 # ELIMINA LAVORAZIONE (LOGICA)
@@ -1285,6 +1342,56 @@ def elimina_lavorazione(id):
     finally:
         cur.close()
         conn.close()
+
+@app.route('/officina/aggiorna_stato/<int:id>', methods=['POST'])
+@login_required
+def officina_aggiorna_stato(id):
+    if session.get('ruolo') != 'officina':
+        return jsonify({"success": False, "message": "Accesso non autorizzato."}), 403
+
+    data = request.get_json(silent=True) or {}
+    stato_input = (data.get('stato') or '').replace('_', ' ').lower().strip()
+
+    # Dizionario mapping: frontend → DB
+    mappa_stati = {
+        'attesa del levabolle': 'attesa del levabolle',
+        'completata': 'completata'
+    }
+
+    nuovo_stato_db = mappa_stati.get(stato_input)
+    if not nuovo_stato_db:
+        app.logger.warning(f"Stato non valido ricevuto: '{stato_input}'")
+        return jsonify({"success": False, "message": "Stato non valido."}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE lavorazioni 
+            SET stato = %s, data_aggiornamento = NOW()
+            WHERE id = %s AND id_officina = %s AND eliminata = FALSE
+        """, (nuovo_stato_db, id, session['user_id']))
+
+        if cur.rowcount == 0:
+            return jsonify({"success": False, "message": "Lavorazione non trovata o già eliminata."}), 404
+
+        conn.commit()
+
+        try:
+            log_storico(session['user_id'], f"Aggiornato stato lavorazione {id} → {nuovo_stato_db}", "lavorazioni", id)
+        except Exception as log_err:
+            app.logger.warning(f"Errore durante log storico lavorazione {id}: {log_err}")
+
+    except Exception as e:
+        conn.rollback()
+        app.logger.exception(f"Errore aggiornando stato lavorazione {id}: {e}")
+        return jsonify({"success": False, "message": "Errore aggiornando stato."}), 500
+    finally:
+        cur.close()
+        conn.close()
+
+    return jsonify({"success": True, "nuovo_stato": nuovo_stato_db})
+
 # ===============================
 # ROUTE OFFICINA GOMME AGGIORNATE
 # ===============================

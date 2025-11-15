@@ -28,19 +28,7 @@
         .empty-message { text-align: center; padding: 20px; font-size: 1.2em; color: #666; }
 
         .model-actions-shape { display: flex; gap: 10px; flex-wrap: wrap; }
-        .shape-btn {
-            padding: 10px 16px;
-            font-weight: bold;
-            border-radius: 14px;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1em;
-            min-width: 50px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-align: center;
-            color: white;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-        }
+        .shape-btn { padding: 10px 16px; font-weight: bold; border-radius: 14px; border: none; cursor: pointer; font-size: 1.1em; min-width: 50px; transition: transform 0.2s, box-shadow 0.2s; text-align: center; color: white; box-shadow: 0 3px 8px rgba(0,0,0,0.25); }
         .shape-modifica { background-color: #FFA500; }
         .shape-modifica:hover { transform: scale(1.1); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .shape-elimina { background-color: #dc3545; }
@@ -56,42 +44,18 @@
 
         .flash-message { margin-bottom: 10px; }
 
-        /* QUADRATI (stile base) - z-index aumentati per evitare overlay */
+        /* QUADRATI (stile base) */
         #quadrato-lavorazioni {
-            position: fixed;
-            top: 100px;
-            left: 20px;
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            z-index: 2100; /* aumentato */
-            transition: transform 0.2s;
-            -webkit-tap-highlight-color: transparent;
-            pointer-events: auto;
-            background-color: #fff3cd;
+            position: fixed; top: 100px; left: 20px; width: 60px; height: 60px; border-radius: 12px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 2100; transition: transform 0.2s; -webkit-tap-highlight-color: transparent; pointer-events: auto; background-color: #fff3cd;
         }
         #quadrato-lavorazioni:hover { transform: scale(1.1); }
 
-        /* POPUP LAVORAZIONI (sotto i bottoni) */
+        /* POPUP LAVORAZIONI */
         #popup-lavorazioni {
-            position: fixed;
-            top: 250px;
-            left: 20px;
-            width: 350px;
-            max-height: 500px;
-            background-color: #fff;
-            border-radius: 16px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-            padding: 20px;
-            overflow-y: auto;
-            display: none;
-            z-index: 2000;
+            position: fixed; top: 250px; left: 20px; width: 350px; max-height: 500px;
+            background-color: #fff; border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); padding: 20px; overflow-y: auto; display: none; z-index: 2000;
         }
         #popup-lavorazioni h3 { margin-top: 0; color: #004080; text-align: center; }
         #popup-lavorazioni ul { list-style: none; padding-left: 0; max-height: 400px; overflow-y: auto; }
@@ -99,56 +63,22 @@
         .lavorazione { padding: 8px; margin-bottom: 6px; border-radius: 8px; cursor: pointer; transition: background-color 0.3s; display:flex; justify-content:space-between; align-items:center; }
         .lavorazione.ordine_inviato { background-color: #fff3cd; }
         .lavorazione.in_lavorazione { background-color: #cce5ff; }
+        .lavorazione.attesa_del_levabolle { background-color: #b0b0b0; color:#000; } /* grigio metallizzato */
         .lavorazione.completata { background-color: #c8f7c5; }
         .lavorazione button { margin-left: 5px; padding: 4px 8px; font-size:0.85em; border-radius:6px; border:none; cursor:pointer; font-weight:bold; }
 
         /* STORICO */
-        #btn-storico {
-            position: fixed;
-            bottom: 25px;
-            right: 25px;
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            background-color: #ffc107;
-            color: #000;
-            font-size: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            z-index: 1200;
-            transition: transform 0.2s, background-color 0.3s;
-        }
+        #btn-storico { position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px; border-radius: 50%; background-color: #ffc107; color: #000; font-size: 28px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 1200; transition: transform 0.2s, background-color 0.3s; }
         #btn-storico:hover { transform: scale(1.1); background-color: #ffcd39; }
-        #popup-storico {
-            position: fixed;
-            bottom: 100px;
-            right: 25px;
-            width: 350px;
-            max-height: 450px;
-            background-color: #fff; /* rimasto bianco */
-            border-radius: 16px;
-            box-shadow: none; /* rimossa ombra/ritaglio */
-            padding: 20px;
-            overflow-y: auto;
-            display: none;
-            z-index: 1201;
-        }
+        #popup-storico { position: fixed; bottom: 100px; right: 25px; width: 350px; max-height: 450px; background-color: #fff; border-radius: 16px; box-shadow: none; padding: 20px; overflow-y: auto; display: none; z-index: 1201; }
     </style>
 </head>
 <body>
 <header>
-    {% if session.get('ruolo') == 'accettazione' %}
-        <a href="{{ url_for('home') }}">
-    {% elif session.get('ruolo') == 'officina' %}
-        <a href="{{ url_for('home_officina') }}">
-    {% elif session.get('ruolo') == 'officina_gomme' %}
-        <a href="{{ url_for('home_officina_gomme') }}">
-    {% else %}
-        <a href="{{ url_for('scelta_login') }}">
+    {% if session.get('ruolo') == 'accettazione' %}<a href="{{ url_for('home') }}">
+    {% elif session.get('ruolo') == 'officina' %}<a href="{{ url_for('home_officina') }}">
+    {% elif session.get('ruolo') == 'officina_gomme' %}<a href="{{ url_for('home_officina_gomme') }}">
+    {% else %}<a href="{{ url_for('scelta_login') }}">
     {% endif %}
         <img src="{{ url_for('static', filename='logo.26861.png') }}" alt="Logo Gruppo AutoscalA">
     </a>
@@ -195,24 +125,20 @@
 </main>
 
 {% if session.get('username') and session.get('ruolo') == 'accettazione' %}
-<!-- LAVORAZIONI -->
 <div id="quadrato-lavorazioni" role="button" aria-label="Lavorazioni" tabindex="0">📁</div>
 <div id="popup-lavorazioni">
     <h3>Lavorazioni Recenti</h3>
     <ul id="lista-lavorazioni"></ul>
 </div>
 
-<!-- PROMEMORIA -->
 {% include 'promemoria_widget.html' %}
 
-<!-- STORICO -->
 <button id="btn-storico">🕒</button>
 <div id="popup-storico">
     <h3>Storico Operazioni</h3>
     <ul id="storico-list"></ul>
 </div>
 
-<!-- POPUP DETTAGLI LAVORAZIONE -->
 <div id="popup-dettagli" style="display:none;
      position: fixed; top: 50%; left: 50%;
      transform: translate(-50%, -50%);
@@ -231,7 +157,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     function escapeHtmlText(s){ return String(s||'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
-    function isVisible(el){ return el && window.getComputedStyle(el).display !== 'none'; }
 
     const quadLav = document.getElementById('quadrato-lavorazioni');
     const popupLav = document.getElementById('popup-lavorazioni');
@@ -264,39 +189,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 const li = document.createElement('li');
                 li.classList.add('lavorazione');
                 li.dataset.id = item.id;
-                li.classList.remove('ordine_inviato', 'in_lavorazione', 'completata');
-                if(item.stato === 'ordine inviato' || item.stato === 'ordine_inviato') li.classList.add('ordine_inviato');
-                else if(item.stato === 'in lavorazione' || item.stato === 'in_lavorazione') li.classList.add('in_lavorazione');
-                else if(item.stato === 'completata') li.classList.add('completata');
+
+                // normalizzazione stato per CSS e logica pulsanti
+                let statoNorm = (item.stato || '').toLowerCase().replace(/ /g,'_');
+                li.classList.remove('ordine_inviato','in_lavorazione','attesa_levabolle','completata','attesa_del_levabolle');
+                li.classList.add(statoNorm);
 
                 const displayDate = item.data_creazione || '';
                 const marca = item.marca || '';
                 const modello = item.modello || '';
                 const stato = item.stato || '';
 
+                // nasconde i pulsanti correttamente per stati bloccati
+                const hidePresa = ['in_lavorazione','completata','attesa_del_levabolle'].includes(statoNorm) ? 'display:none;' : '';
+                const hideCompletata = ['completata','attesa_del_levabolle'].includes(statoNorm) ? 'display:none;' : '';
+
                 li.innerHTML = `<span>[${displayDate}] ${marca} ${modello} - ${stato}</span>
                     <span>
-                        ${(stato!=='in lavorazione'&&stato!=='in_lavorazione'&&stato!=='completata')?'<button class="btn-presa">➡️</button>':''}
-                        ${stato!=='completata'?'<button class="btn-completata">✔️</button>':''}
+                        <button class="btn-presa" style="${hidePresa}">➡️</button>
+                        <button class="btn-completata" style="${hideCompletata}">✔️</button>
+                        <button class="btn-modifica">✏️</button>
                         <button class="btn-elimina">🗑️</button>
                     </span>`;
 
-                li.querySelector('.btn-presa')?.addEventListener('click', async (e)=>{
+                li.querySelector('.btn-presa')?.addEventListener('click', async e=>{
                     e.stopPropagation();
                     await aggiornaStato(item.id,'in_lavorazione');
                 });
-                li.querySelector('.btn-completata')?.addEventListener('click', async (e)=>{
+                li.querySelector('.btn-completata')?.addEventListener('click', async e=>{
                     e.stopPropagation();
                     await aggiornaStato(item.id,'completata');
                 });
-                li.querySelector('.btn-elimina')?.addEventListener('click', async (e)=>{
+                li.querySelector('.btn-elimina')?.addEventListener('click', async e=>{
                     e.stopPropagation();
                     if(confirm('Eliminare lavorazione?')) await eliminaLavorazione(item.id);
                 });
+                li.querySelector('.btn-modifica')?.addEventListener('click', async e=>{
+                    e.stopPropagation();
+                    openLavorazioneDetail(item,true);
+                });
 
-                li.addEventListener('click', (e) => {
-                    if (e.target && (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button'))) return;
-                    openLavorazioneDetail(item);
+                li.addEventListener('click', e=>{
+                    if(e.target && (e.target.tagName.toLowerCase()==='button'||e.target.closest('button'))) return;
+                    openLavorazioneDetail(item,false);
                 });
 
                 listaLav.appendChild(li);
@@ -322,29 +257,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }catch(err){ console.error(err); alert('Errore eliminazione'); }
     }
 
-    function openLavorazioneDetail(item){
+    function openLavorazioneDetail(item, editable=false){
         if(!popupDettagli || !dettagliList) return;
         dettagliList.innerHTML = '';
         const rows = [];
+        function inputOrText(val,key){ return editable ? `<input type="text" value="${escapeHtmlText(val||'')}" data-key="${key}">` : escapeHtmlText(val||''); }
 
-        rows.push(`<li><strong>N° Ordine:</strong> ${item.ordine_riparazione || ''}</li>`);
-        rows.push(`<li><strong>Tipo:</strong> ${item.tipo || ''}</li>`);
-        rows.push(`<li><strong>Marca:</strong> ${item.marca || ''}</li>`);
-        rows.push(`<li><strong>Modello:</strong> ${item.modello || ''}</li>`);
-        rows.push(`<li><strong>Cilindrata:</strong> ${item.cilindrata || ''}</li>`);
-        rows.push(`<li><strong>KW:</strong> ${item.kw || ''}</li>`);
-        rows.push(`<li><strong>Anno:</strong> ${item.anno || ''}</li>`);
-        rows.push(`<li><strong>Nome cliente:</strong> ${item.cliente_nome || ''}</li>`);
-        rows.push(`<li><strong>Cognome cliente:</strong> ${item.cognome_cliente || ''}</li>`);
-        rows.push(`<li><strong>Targa:</strong> ${item.targa || ''}</li>`);
-        rows.push(`<li><strong>Descrizione:</strong> ${escapeHtmlText(item.descrizione || '')}</li>`);
-        rows.push(`<li><strong>Note:</strong> ${escapeHtmlText(item.note || '')}</li>`);
-        if(item.dettagli) rows.push(`<li><strong>Dettagli:</strong> ${escapeHtmlText(item.dettagli)}</li>`);
-        rows.push(`<li><strong>Stato:</strong> ${item.stato || ''}</li>`);
-        rows.push(`<li><strong>Data Creazione:</strong> ${item.data_creazione || ''}</li>`);
+        rows.push(`<li><strong>N° Ordine:</strong> ${inputOrText(item.ordine_riparazione,'ordine_riparazione')}</li>`);
+        rows.push(`<li><strong>Tipo:</strong> ${inputOrText(item.tipo,'tipo')}</li>`);
+        rows.push(`<li><strong>Marca:</strong> ${inputOrText(item.marca,'marca')}</li>`);
+        rows.push(`<li><strong>Modello:</strong> ${inputOrText(item.modello,'modello')}</li>`);
+        rows.push(`<li><strong>Cilindrata:</strong> ${inputOrText(item.cilindrata,'cilindrata')}</li>`);
+        rows.push(`<li><strong>KW:</strong> ${inputOrText(item.kw,'kw')}</li>`);
+        rows.push(`<li><strong>Anno:</strong> ${inputOrText(item.anno,'anno')}</li>`);
+        rows.push(`<li><strong>Nome cliente:</strong> ${inputOrText(item.cliente_nome,'cliente_nome')}</li>`);
+        rows.push(`<li><strong>Cognome cliente:</strong> ${inputOrText(item.cognome_cliente,'cognome_cliente')}</li>`);
+        rows.push(`<li><strong>Targa:</strong> ${inputOrText(item.targa,'targa')}</li>`);
+        rows.push(`<li><strong>Descrizione:</strong> ${inputOrText(item.descrizione,'descrizione')}</li>`);
+        rows.push(`<li><strong>Note:</strong> ${inputOrText(item.note,'note')}</li>`);
+        if(item.dettagli) rows.push(`<li><strong>Dettagli:</strong> ${inputOrText(item.dettagli,'dettagli')}</li>`);
+        rows.push(`<li><strong>Stato:</strong> ${escapeHtmlText(item.stato || '')}</li>`);
+        rows.push(`<li><strong>Data Creazione:</strong> ${escapeHtmlText(item.data_creazione || '')}</li>`);
+
+        if(editable) rows.push(`<li><button id="btn-salva-lavorazione" style="margin-top:10px;background-color:#28a745;color:white;border:none;padding:10px 15px;border-radius:6px;cursor:pointer;">💾 Salva</button></li>`);
 
         dettagliList.innerHTML = rows.join('');
         popupDettagli.style.display = 'block';
+
+        if(editable){
+            document.getElementById('btn-salva-lavorazione')?.addEventListener('click', async ()=>{
+                const inputs = dettagliList.querySelectorAll('input');
+                const payload = {};
+                inputs.forEach(inp=>{ payload[inp.dataset.key] = inp.value; });
+                try{
+                    const res = await fetch(`/accettazione/modifica_lavorazione/${item.id}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+                    const data = await res.json();
+                    if(data && data.success){
+                        alert('Modifiche salvate');
+                        popupDettagli.style.display='none';
+                        refreshLavorazioni();
+                    } else alert('Errore salvataggio');
+                }catch(err){ console.error(err); alert('Errore comunicazione'); }
+            });
+        }
     }
 
     if (chiudiDettagli) {
