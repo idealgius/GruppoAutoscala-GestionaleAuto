@@ -20,7 +20,7 @@
         <select id="filtro-misura">
             <option value="">Tutte le misure</option>
             {% for g in gomme %}
-                {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ 'R' ~ g.diametro %}
+                {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
                 <option value="{{ misura }}">{{ misura }}</option>
             {% endfor %}
         </select>
@@ -28,29 +28,68 @@
 
     <div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
         {% for g in gomme %}
-        <div class="gomma-item" data-id="{{ g.id }}" data-marca="{{ g.marca }}" data-misura="{{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }}"
-             style="padding:12px 15px; border-radius:8px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
-            <div style="flex:1;">
-                <strong>{{ g.marca }}</strong> - {{ g.larghezza }}/{{ g.rapporto }}R{{ g.diametro }} <br>
+        {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
+        <div class="gomma-item"
+             data-id="{{ g.id }}"
+             data-marca="{{ g.marca }}"
+             data-misura="{{ misura }}"
+             style="padding:15px; border-radius:10px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.15);">
 
-                Prezzo unitario: 
-                <input type="text" value="{{ g.prezzo_unitario }}" class="prezzo-unitario" style="width:70px;"
-                       {% if solo_lettura %}readonly{% endif %}> € - 
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                    <strong style="font-size:18px;">{{ g.marca }}</strong>
+                    <div style="font-size:16px; margin-bottom:5px;">
+                        {{ misura }}
+                    </div>
 
-                Prezzo treno: 
-                <input type="text" value="{{ g.prezzo_treno }}" class="prezzo-treno" style="width:70px;"
-                       {% if solo_lettura %}readonly{% endif %}> € <br>
+                    <div style="margin-top:8px;">
+                        Prezzo unitario:
+                        <input type="text" value="{{ g.prezzo_unitario }}"
+                               class="prezzo-unitario"
+                               style="width:70px;"
+                               {% if solo_lettura %}readonly{% endif %}> €
 
-                Disponibilità: 
-                <button class="dec-disponibilita" style="padding:2px 6px;" {% if solo_lettura %}disabled{% endif %}>-</button>
-                <span class="quantita">{{ g.disponibilita }}</span>
-                <button class="inc-disponibilita" style="padding:2px 6px;" {% if solo_lettura %}disabled{% endif %}>+</button>
-            </div>
-            <div>
-                {% if not solo_lettura %}
-                <button class="save-gomma" style="margin-left:10px; padding:5px 10px; background:#28a745; color:white; border:none; border-radius:5px; cursor:pointer;">💾 Salva</button>
-                <button class="delete-gomma" style="margin-left:10px; padding:5px 10px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer;">❌ Elimina</button>
-                {% endif %}
+                        &nbsp;&nbsp;
+
+                        Prezzo treno:
+                        <input type="text" value="{{ g.prezzo_treno }}"
+                               class="prezzo-treno"
+                               style="width:70px;"
+                               {% if solo_lettura %}readonly{% endif %}> €
+                    </div>
+
+                    <div style="margin-top:10px;">
+                        Disponibilità:
+                        <button class="dec-disponibilita" style="padding:3px 6px;"
+                                {% if solo_lettura %}disabled{% endif %}>-</button>
+                        <span class="quantita" style="font-weight:bold; font-size:16px;">{{ g.disponibilita }}</span>
+                        <button class="inc-disponibilita" style="padding:3px 6px;"
+                                {% if solo_lettura %}disabled{% endif %}>+</button>
+                    </div>
+
+                    <!-- NOTE -->
+                    <div style="margin-top:12px;">
+                        <label><strong>Note:</strong></label><br>
+                        <textarea class="nota-gomma"
+                                  rows="2"
+                                  style="width:95%; resize:vertical;"
+                                  {% if solo_lettura %}readonly{% endif %}>{{ g.note or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div>
+                    {% if not solo_lettura %}
+                    <button class="save-gomma"
+                            style="margin-left:15px; padding:7px 12px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer;">
+                        💾 Salva
+                    </button>
+
+                    <button class="delete-gomma"
+                            style="margin-top:10px; margin-left:15px; padding:7px 12px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;">
+                        ❌ Elimina
+                    </button>
+                    {% endif %}
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -63,7 +102,6 @@
 // --- FILTRI ---
 const filtroMarca = document.getElementById('filtro-marca');
 const filtroMisura = document.getElementById('filtro-misura');
-const listaGomme = document.getElementById('lista-gomme');
 
 function filtraGomme(){
     const marca = filtroMarca.value;
@@ -72,7 +110,7 @@ function filtraGomme(){
     document.querySelectorAll('.gomma-item').forEach(div=>{
         const matchMarca = !marca || div.dataset.marca === marca;
         const matchMisura = !misura || div.dataset.misura === misura;
-        div.style.display = (matchMarca && matchMisura) ? 'flex' : 'none';
+        div.style.display = (matchMarca && matchMisura) ? 'block' : 'none';
     });
 }
 
@@ -83,50 +121,61 @@ if(filtroMisura) filtroMisura.addEventListener('change', filtraGomme);
 {% if not solo_lettura %}
 document.querySelectorAll('.gomma-item').forEach(div => {
     const id = div.dataset.id;
-    const quantitaSpan = div.querySelector('.quantita');
-    const inputUnit = div.querySelector('.prezzo-unitario');
-    const inputTreno = div.querySelector('.prezzo-treno');
+    const qta = div.querySelector('.quantita');
+    const prezzoUnit = div.querySelector('.prezzo-unitario');
+    const prezzoTreno = div.querySelector('.prezzo-treno');
+    const note = div.querySelector('.nota-gomma');
 
-    // Incrementa quantità
+    // Incrementa
     div.querySelector('.inc-disponibilita').addEventListener('click', () => {
-        let val = parseInt(quantitaSpan.textContent);
-        quantitaSpan.textContent = val + 1;
+        qta.textContent = parseInt(qta.textContent) + 1;
     });
 
-    // Decrementa quantità
+    // Decrementa
     div.querySelector('.dec-disponibilita').addEventListener('click', () => {
-        let val = parseInt(quantitaSpan.textContent);
-        if(val > 0) quantitaSpan.textContent = val - 1;
+        if(parseInt(qta.textContent) > 0){
+            qta.textContent = parseInt(qta.textContent) - 1;
+        }
     });
 
-    // Salva modifiche tramite fetch al backend
+    // Salvataggio
     div.querySelector('.save-gomma').addEventListener('click', async () => {
         const formData = new FormData();
-        formData.append("prezzo_unitario", inputUnit.value);
-        formData.append("prezzo_treno", inputTreno.value);
-        formData.append("disponibilita", quantitaSpan.textContent);
+        formData.append("prezzo_unitario", prezzoUnit.value);
+        formData.append("prezzo_treno", prezzoTreno.value);
+        formData.append("disponibilita", qta.textContent);
+        formData.append("note", note.value);
 
         try {
             const res = await fetch(`/modifica_gomma/${id}`, { method: "POST", body: formData });
             if(res.ok){
-                alert("✅ Gomma aggiornata correttamente.");
-            } else { alert("❌ Errore durante l'aggiornamento."); }
-        } catch(e){ console.error(e); alert("❌ Errore di comunicazione con il server."); }
+                alert("✔ Gomma aggiornata correttamente.");
+            } else {
+                alert("❌ Errore durante l'aggiornamento.");
+            }
+        } catch(e){
+            alert("❌ Errore di comunicazione con il server.");
+        }
     });
 
-    // Elimina gomma tramite fetch al backend
+    // Eliminazione
     div.querySelector('.delete-gomma').addEventListener('click', async () => {
-        if(!confirm('Sei sicuro di voler eliminare questa gomma?')) return;
+        if(!confirm('Eliminare questa gomma?')) return;
 
         try {
             const res = await fetch(`/elimina_gomma/${id}`, { method: "POST" });
             if(res.ok){
                 div.remove();
-                alert("🗑️ Gomma eliminata correttamente.");
-            } else { alert("❌ Errore durante l'eliminazione."); }
-        } catch(e){ console.error(e); alert("❌ Errore di comunicazione con il server."); }
+                alert("🗑️ Gomma eliminata.");
+            } else {
+                alert("❌ Errore durante l'eliminazione.");
+            }
+        } catch(e){
+            alert("❌ Errore di comunicazione con il server.");
+        }
     });
 });
 {% endif %}
 </script>
+
 {% endblock %}

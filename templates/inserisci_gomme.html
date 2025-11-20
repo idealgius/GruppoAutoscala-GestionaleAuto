@@ -1,66 +1,136 @@
 {% extends "base.html" %}
-
-{% block title %}Inserisci Gomme{% endblock %}
-
 {% block content %}
-<h1 style="text-align:center; color:#004080; margin-bottom:30px;">➕ Inserisci Gomme</h1>
 
-<form id="form-inserisci-gomme" method="POST" action="{{ url_for('inserisci_gomme') }}"
-      style="max-width:500px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
-    
-    <!-- Marca -->
-    <label for="marca">Marca:</label>
-    <select id="marca" name="marca" required>
-        <option value="">-- Seleziona marca --</option>
-        {% for marca in marche|sort %}
-            <option value="{{ marca }}">{{ marca }}</option>
-        {% endfor %}
-    </select>
+<h2 class="mb-4">Inserisci Gomme</h2>
 
-    <!-- Larghezza -->
-    <label for="larghezza">Larghezza:</label>
-    <input type="text" id="larghezza" name="larghezza" minlength="3" maxlength="3" pattern="\d{3}" required placeholder="Esempio: 205">
+<div class="container">
 
-    <!-- Rapporto d'aspetto -->
-    <label for="rapporto">Rapporto d'aspetto:</label>
-    <input type="text" id="rapporto" name="rapporto" minlength="2" maxlength="3" pattern="\d{2,3}" required placeholder="Esempio: 55">
+    <!-- FORM INSERIMENTO GOMME -->
+    <form id="form-gomme" method="POST" action="{{ url_for('inserisci_gomme') }}" class="border p-4 rounded shadow-sm bg-light">
 
-    <!-- Diametro -->
-    <label for="diametro">Diametro:</label>
-    <input type="text" id="diametro" name="diametro" minlength="2" maxlength="2" pattern="\d{2}" required placeholder="Esempio: 16">
+        <div class="mb-3">
+            <label class="form-label fw-bold">Marca</label>
+            <select name="marca" class="form-select" required>
+                <option value="">Seleziona marca...</option>
+                {% for m in marche %}
+                <option value="{{ m }}" {% if request.form.marca == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-    <!-- Prezzo unitario -->
-    <label for="prezzo_unitario">Prezzo unitario (€):</label>
-    <input type="text" id="prezzo_unitario" name="prezzo_unitario" pattern="\d{1,3},\d{2}" required placeholder="Esempio: 150,00">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Larghezza</label>
+                <input type="text" class="form-control" name="larghezza" required
+                       pattern="\d{3}" placeholder="Esempio: 205"
+                       value="{{ request.form.larghezza or '' }}">
+            </div>
 
-    <!-- Prezzo Treno -->
-    <label for="prezzo_treno">Prezzo Treno (€):</label>
-    <input type="text" id="prezzo_treno" name="prezzo_treno" pattern="\d{1,3},\d{2}" required placeholder="Esempio: 600,00">
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Rapporto</label>
+                <input type="text" class="form-control" name="rapporto" required
+                       pattern="\d{2}" placeholder="Esempio: 55"
+                       value="{{ request.form.rapporto or '' }}">
+            </div>
 
-    <!-- Disponibilità iniziale -->
-    <label for="disponibilita">Disponibilità iniziale:</label>
-    <input type="number" id="disponibilita" name="disponibilita" min="0" max="99" required placeholder="Esempio: 10">
+            <div class="col-md-4 mb-3">
+                <label class="form-label fw-bold">Diametro</label>
+                <input type="text" class="form-control" name="diametro" required
+                       pattern="\d{2}" placeholder="Esempio: 16"
+                       value="{{ request.form.diametro or '' }}">
+            </div>
+        </div>
 
-    <button type="submit" style="padding:10px 20px; background:#007BFF; color:white; border:none; border-radius:6px; cursor:pointer;">
-        Salva Gomme
-    </button>
-</form>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Prezzo Unitario (€)</label>
+                <input type="number" class="form-control" step="0.01" name="prezzo_unitario" required
+                       value="{{ request.form.prezzo_unitario or '' }}">
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label fw-bold">Prezzo Treno (€)</label>
+                <input type="number" class="form-control" step="0.01" name="prezzo_treno" required
+                       value="{{ request.form.prezzo_treno or '' }}">
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Disponibilità (0–99)</label>
+            <input type="number" class="form-control" name="disponibilita" min="0" max="99" required
+                   value="{{ request.form.disponibilita or '' }}">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold">Note</label>
+            <textarea class="form-control" name="note" rows="2" placeholder="Note aggiuntive...">{{ request.form.note or '' }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-2">Inserisci Gomma</button>
+    </form>
+
+    <hr class="my-5">
+
+    <!-- TABELLA GOMME GIÀ INSERITE -->
+    <h3 class="mb-3">Gomme Registrate</h3>
+
+    {% if gomme %}
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Marca</th>
+                <th>Misura</th>
+                <th>Prezzo Unitario</th>
+                <th>Prezzo Treno</th>
+                <th>Disponibilità</th>
+                <th>Note</th>
+                <th>Data Inserimento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for g in gomme %}
+            <tr>
+                <td>{{ g.marca }}</td>
+                <td>{{ g.larghezza }}/{{ g.rapporto }} R{{ g.diametro }}</td>
+                <td>{{ "%.2f"|format(g.prezzo_unitario) }} €</td>
+                <td>{{ "%.2f"|format(g.prezzo_treno) }} €</td>
+                <td>{{ g.disponibilita }}</td>
+                <td>{{ g.note }}</td>
+                <td>{{ g.data_creazione.strftime("%d/%m/%Y %H:%M") }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>Nessuna gomma inserita.</p>
+    {% endif %}
+
+</div>
 
 <script>
-document.getElementById('form-inserisci-gomme').addEventListener('submit', function(e){
-    const prezzoUnit = document.getElementById('prezzo_unitario').value;
-    const prezzoTreno = document.getElementById('prezzo_treno').value;
-    const prezzoPattern = /^\d{1,3},\d{2}$/;
+document.getElementById('form-gomme').addEventListener('submit', function(e) {
+    let errors = [];
 
-    if(!prezzoPattern.test(prezzoUnit) || !prezzoPattern.test(prezzoTreno)){
-        alert("I prezzi devono avere il formato corretto: 00,00 o 000,00");
+    const larghezza = this.larghezza.value;
+    const rapporto = this.rapporto.value;
+    const diametro = this.diametro.value;
+    const prezzoUnitario = parseFloat(this.prezzo_unitario.value);
+    const prezzoTreno = parseFloat(this.prezzo_treno.value);
+    const disponibilita = parseInt(this.disponibilita.value);
+
+    if(!/^\d{3}$/.test(larghezza)) errors.push("Larghezza deve essere esattamente 3 cifre");
+    if(!/^\d{2}$/.test(rapporto)) errors.push("Rapporto deve essere esattamente 2 cifre");
+    if(!/^\d{2}$/.test(diametro)) errors.push("Diametro deve essere esattamente 2 cifre");
+    if(isNaN(prezzoUnitario) || prezzoUnitario <= 0) errors.push("Prezzo unitario deve essere maggiore di 0");
+    if(isNaN(prezzoTreno) || prezzoTreno <= 0) errors.push("Prezzo treno deve essere maggiore di 0");
+    if(isNaN(disponibilita) || disponibilita < 0 || disponibilita > 99) errors.push("Disponibilità deve essere tra 0 e 99");
+
+    if(errors.length > 0){
+        alert("Errore:\n- " + errors.join("\n- "));
         e.preventDefault();
-        return;
+        return false;
     }
-
-    // Converti in formato compatibile con Python (virgola -> punto)
-    document.getElementById('prezzo_unitario').value = prezzoUnit.replace(',', '.');
-    document.getElementById('prezzo_treno').value = prezzoTreno.replace(',', '.');
 });
 </script>
+
 {% endblock %}

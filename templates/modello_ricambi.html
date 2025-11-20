@@ -18,6 +18,7 @@
       <th>ID</th>
       <th>Nome</th>
       <th>Codice</th>
+      <th>Tipo Filtro</th>
       <th>Azioni</th>
     </tr>
   </thead>
@@ -27,6 +28,7 @@
       <td>{{ r['id'] }}</td>
       <td>{{ r['nome'] }}</td>
       <td>{{ r['codice'] }}</td>
+      <td>{{ r.get('tipo_filtro', '') }}</td>
       <td class="action-buttons">
         <form action="{{ url_for('rimuovi_ricambio_da_modello', modello_id=modello['id'], ricambio_id=r['id']) }}" method="POST" style="display:inline;">
           <button type="submit" class="elimina">❌ Rimuovi</button>
@@ -45,15 +47,45 @@
 <h3>Aggiungi ricambio al modello</h3>
 {% if non_associati %}
 <form action="{{ url_for('aggiungi_ricambio_a_modello', modello_id=modello['id']) }}" method="POST" style="max-width:600px;">
+  <label for="tipo_filtro">Tipo di filtro:</label>
+  <select name="tipo_filtro" id="tipo_filtro" required>
+    <option value="">-- Seleziona tipo filtro --</option>
+    <option value="Filtro Olio">Filtro Olio</option>
+    <option value="Filtro Aria">Filtro Aria</option>
+    <option value="Filtro Abitacolo">Filtro Abitacolo</option>
+  </select>
+
   <label for="ricambio_id">Scegli ricambio:</label>
   <select name="ricambio_id" id="ricambio_id" required>
-    <option value="">-- Seleziona --</option>
-    {% for r in non_associati %}
-      <option value="{{ r['id'] }}">{{ r['nome'] }} — {{ r['codice'] }}</option>
-    {% endfor %}
+    <option value="">-- Seleziona tipo filtro prima --</option>
   </select>
+
   <button type="submit" style="margin-top:10px;">➕ Associa ricambio</button>
 </form>
+
+<script>
+  // Lista dei ricambi non associati passata dal template
+  const ricambi = {{ non_associati|tojson }};
+  const tipoFiltroSelect = document.getElementById('tipo_filtro');
+  const ricambioSelect = document.getElementById('ricambio_id');
+
+  tipoFiltroSelect.addEventListener('change', () => {
+    const tipoSelezionato = tipoFiltroSelect.value;
+    ricambioSelect.innerHTML = '<option value="">-- Seleziona --</option>';
+
+    ricambi.forEach(r => {
+      const nomeLower = r.nome.toLowerCase();
+      if ((tipoSelezionato === 'Filtro Olio' && nomeLower.includes('olio')) ||
+          (tipoSelezionato === 'Filtro Aria' && nomeLower.includes('aria')) ||
+          (tipoSelezionato === 'Filtro Abitacolo' && nomeLower.includes('abitacolo'))) {
+        const option = document.createElement('option');
+        option.value = r.id;
+        option.text = r.nome + ' — ' + r.codice;
+        ricambioSelect.appendChild(option);
+      }
+    });
+  });
+</script>
 {% else %}
 <p>Tutti i ricambi disponibili sono già associati a questo modello (o non esistono ricambi).</p>
 {% endif %}

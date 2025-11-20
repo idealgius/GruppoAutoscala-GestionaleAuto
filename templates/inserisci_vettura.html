@@ -12,7 +12,7 @@
     <label for="marca">Marca:</label>
     <select name="marca" id="marca" required>
         <option value="">-- Seleziona marca --</option>
-        {% for m in marche %}
+        {% for m in marche|default([]) %}
             <option value="{{ m }}">{{ m }}</option>
         {% endfor %}
     </select>

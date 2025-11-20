@@ -433,19 +433,49 @@ def lista_vetture():
 @app.route('/inserisci_vettura', methods=['GET'])
 @login_required
 def inserisci_vettura():
+    # Lista marche fisse per il menù a tendina
+    marche = [
+        "ALFA ROMEO", "AUDI", "BMW", "BYD", "CHEVROLET", "CHRYSLER",
+        "CITROEN", "CUPRA", "DACIA", "DAEWOO", "DAIHATSU", "DODGE",
+        "DR", "EVO", "FIAT", "FORD", "HONDA", "HYUNDAI", "ICH-X",
+        "INFINITI", "ISUZU", "IVECO", "JAGUAR", "JEEP", "KIA", "LADA",
+        "LANCIA", "LAND ROVER", "LEXUS", "LYNK&CO", "MAN", "MASERATI",
+        "MAXUS", "MAZDA", "MERCEDES", "MG", "MINI", "MITSUBISHI",
+        "NISSAN", "OPEL", "PEUGEOT", "PIAGGIO", "POLESTAR", "PORSCHE",
+        "RENAULT", "ROVER", "SAAB", "SEAT", "SKODA", "SMART",
+        "SPORTEQUIPE", "SSANGYONG", "SUBARU", "SUZUKI", "TATA",
+        "TESLA", "TOYOTA", "VOLKSWAGEN", "VOLVO"
+    ]
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT id, nome, cognome FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+        # Legge i clienti dell'utente
+        cur.execute(
+            "SELECT id, nome, cognome FROM clienti WHERE utente_id=%s ORDER BY id",
+            (session['user_id'],)
+        )
         clienti = cur.fetchall()
-        cur.execute("SELECT DISTINCT marca FROM modelli WHERE utente_id=%s ORDER BY marca", (session['user_id'],))
-        marche = [row['marca'] for row in cur.fetchall()]
-        cur.execute("SELECT * FROM modelli WHERE utente_id=%s ORDER BY marca, modello, versione", (session['user_id'],))
+
+        # Legge tutti i modelli dell'utente
+        cur.execute(
+            "SELECT * FROM modelli WHERE utente_id=%s ORDER BY marca, modello, versione",
+            (session['user_id'],)
+        )
         modelli_raw = cur.fetchall()
     finally:
         conn.close()
+
+    # Converte i modelli in JSON per JavaScript
     modelli_json = json.dumps(modelli_raw)
-    return render_template('inserisci_vettura.html', clienti=clienti, marche=marche, modelli_json=modelli_json)
+
+    # Passa marche, clienti e modelli al template
+    return render_template(
+        'inserisci_vettura.html',
+        clienti=clienti,
+        marche=marche,
+        modelli_json=modelli_json
+    )
 
 @app.route('/salva_vettura', methods=['POST'])
 @login_required
@@ -501,16 +531,30 @@ def lista_modelli():
 @app.route('/inserisci_modello', methods=['GET'])
 @login_required
 def inserisci_modello():
-    marche = [
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Preleva marchi già presenti nel DB
+    cur.execute("SELECT DISTINCT marca FROM modelli ORDER BY marca")
+    marche_db = [row[0] for row in cur.fetchall()]
+    conn.close()
+
+    # Lista completa dei marchi possibili
+    marche_totali = [
         "ALFA ROMEO","AUDI","BMW","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA",
-        "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI",
+        "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X",
         "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER",
         "LEXUS","LYNK&CO","MAN","MASERATI","MAXUS","MAZDA","MERCEDES","MG","MINI",
         "MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO","POLESTAR","PORSCHE","RENAULT",
-        "ROVER","SAAB","SEAT","SKODA","SMART","SSANGYONG","SUBARU","SUZUKI","TATA",
+        "ROVER","SAAB","SEAT","SKODA","SMART","SPORTEQUIPE","SSANGYONG","SUBARU","SUZUKI","TATA",
         "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
     ]
-    return render_template('inserisci_modello.html', marche=marche)
+
+    # Combina la lista del DB con quella completa e rimuove duplicati
+    marchi = sorted(set(marche_db + marche_totali))
+
+    return render_template('inserisci_modello.html', marchi=marchi)
+
 
 @app.route('/salva_modello', methods=['POST'])
 @login_required
@@ -750,13 +794,20 @@ def modello_ricambi(modello_id):
 @app.route('/aggiungi_ricambio_a_modello/<int:modello_id>', methods=['POST'])
 @login_required
 def aggiungi_ricambio_a_modello(modello_id):
-    if session.get('username') != 'Giuseppe Palladino':
+    # Controllo permessi
+    if session.get('username') != 'G.AS_Giuseppe.Palladino':
         flash("Non hai i permessi per associare ricambi ai modelli.")
         return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
+    # Prendi dati dal form
     ricambio_id = request.form.get('ricambio_id')
+    tipo_filtro = request.form.get('tipo_filtro')  # Nuovo campo
+
     if not ricambio_id:
         flash("Seleziona un ricambio da associare.")
+        return redirect(url_for('modello_ricambi', modello_id=modello_id))
+    if not tipo_filtro:
+        flash("Seleziona il tipo di filtro.")
         return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
     try:
@@ -768,30 +819,49 @@ def aggiungi_ricambio_a_modello(modello_id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
+        # Controlla che il modello esista
         cur.execute("SELECT id FROM modelli WHERE id=%s", (modello_id,))
         if not cur.fetchone():
             flash("Modello non trovato.")
             return redirect(url_for('lista_modelli'))
 
-        cur.execute("SELECT id FROM ricambi WHERE id=%s", (ricambio_id_int,))
+        # Controlla che il ricambio esista e corrisponda al tipo di filtro selezionato
+        filtro_parola = tipo_filtro.split()[-1]  # 'Olio', 'Aria' o 'Abitacolo'
+        cur.execute(
+            "SELECT id FROM ricambi WHERE id=%s AND nome ILIKE %s",
+            (ricambio_id_int, f"%{filtro_parola}%")
+        )
         if not cur.fetchone():
-            flash("Ricambio non trovato.")
+            flash(f"Il ricambio selezionato non corrisponde al tipo di filtro scelto.")
             return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
-        cur.execute("SELECT 1 FROM modelli_ricambi WHERE modello_id=%s AND ricambio_id=%s", (modello_id, ricambio_id_int))
-        exists = cur.fetchone()
-        if exists:
-            flash("Questo ricambio è già associato a questo modello.")
+        # Controlla se già associato per lo stesso tipo di filtro
+        cur.execute(
+            "SELECT 1 FROM modelli_ricambi WHERE modello_id=%s AND ricambio_id=%s AND tipo_filtro=%s",
+            (modello_id, ricambio_id_int, tipo_filtro)
+        )
+        if cur.fetchone():
+            flash("Questo ricambio è già associato a questo modello per il tipo di filtro selezionato.")
             return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
-        cur.execute("INSERT INTO modelli_ricambi (modello_id, ricambio_id) VALUES (%s, %s)", (modello_id, ricambio_id_int))
+        # Inserisci con tipo_filtro
+        cur.execute(
+            "INSERT INTO modelli_ricambi (modello_id, ricambio_id, tipo_filtro) VALUES (%s, %s, %s)",
+            (modello_id, ricambio_id_int, tipo_filtro)
+        )
         conn.commit()
-        log_storico(session['user_id'], f"Associato ricambio {ricambio_id_int} a modello {modello_id}", "modelli_ricambi", modello_id)
+
+        log_storico(
+            session['user_id'],
+            f"Associato ricambio {ricambio_id_int} ({tipo_filtro}) a modello {modello_id}",
+            "modelli_ricambi",
+            modello_id
+        )
         flash("Ricambio associato correttamente.")
-    except Exception:
+    except Exception as e:
         conn.rollback()
         app.logger.exception("Errore durante l'associazione ricambio-modello.")
-        flash("Si è verificato un errore durante l'associazione.")
+        flash(f"Errore durante l'associazione: {str(e)}")
     finally:
         conn.close()
 
@@ -800,7 +870,7 @@ def aggiungi_ricambio_a_modello(modello_id):
 @app.route('/rimuovi_ricambio_da_modello/<int:modello_id>/<int:ricambio_id>', methods=['POST'])
 @login_required
 def rimuovi_ricambio_da_modello(modello_id, ricambio_id):
-    if session.get('username') != 'Giuseppe Palladino':
+    if session.get('username') != 'G.AS_Giuseppe.Palladino':
         flash("Non hai i permessi per rimuovere ricambi dai modelli.")
         return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
@@ -1414,46 +1484,110 @@ def inserisci_gomme():
         flash("Accesso negato.")
         return redirect(url_for('scelta_login'))
 
-    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Ling Long", "Michelin", "Pirelli"]
+    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Kumho", "Ling Long", "Michelin", "Pirelli"]
     marche.sort()
 
-    if request.method == "POST":
-        try:
-            marca = request.form.get("marca")
-            larghezza = int(request.form.get("larghezza") or 0)
-            rapporto = int(request.form.get("rapporto") or 0)
-            diametro = int(request.form.get("diametro") or 0)
-            # Gestione prezzi italiani con la virgola
-            prezzo_unitario = float(request.form.get("prezzo_unitario", "0").replace(",", "."))
-            prezzo_treno = float(request.form.get("prezzo_treno", "0").replace(",", "."))
-            disponibilita = int(request.form.get("disponibilita") or 0)
+    # Manteniamo i valori inseriti
+    values = {
+        "marca": "",
+        "larghezza": "",
+        "rapporto": "",
+        "diametro": "",
+        "prezzo_unitario": "",
+        "prezzo_treno": "",
+        "disponibilita": "",
+        "note": ""
+    }
 
+    if request.method == "POST":
+        values.update(request.form.to_dict())
+        errors = {}
+
+        # Estrazione dati
+        marca = request.form.get("marca", "").strip()
+        larghezza = request.form.get("larghezza", "").strip()
+        rapporto = request.form.get("rapporto", "").strip()
+        diametro = request.form.get("diametro", "").strip()
+        prezzo_unitario = request.form.get("prezzo_unitario", "").strip()
+        prezzo_treno = request.form.get("prezzo_treno", "").strip()
+        disponibilita = request.form.get("disponibilita", "").strip()
+        note = request.form.get("note", "").strip()
+
+        # Validazioni
+        if not marca or marca not in marche:
+            errors["marca"] = "Seleziona una marca valida."
+
+        if not larghezza.isdigit() or len(larghezza) != 3:
+            errors["larghezza"] = "Larghezza deve essere un numero di 3 cifre."
+
+        if not rapporto.isdigit() or len(rapporto) != 2:
+            errors["rapporto"] = "Rapporto deve essere un numero di 2 cifre."
+
+        if not diametro.isdigit() or len(diametro) != 2:
+            errors["diametro"] = "Diametro deve essere un numero di 2 cifre."
+
+        try:
+            prezzo_unitario_val = float(prezzo_unitario.replace(",", "."))
+            if prezzo_unitario_val <= 0:
+                errors["prezzo_unitario"] = "Prezzo unitario deve essere maggiore di 0."
+        except:
+            errors["prezzo_unitario"] = "Prezzo unitario non valido."
+
+        try:
+            prezzo_treno_val = float(prezzo_treno.replace(",", "."))
+            if prezzo_treno_val <= 0:
+                errors["prezzo_treno"] = "Prezzo treno deve essere maggiore di 0."
+        except:
+            errors["prezzo_treno"] = "Prezzo treno non valido."
+
+        try:
+            disponibilita_val = int(disponibilita)
+            if not (0 <= disponibilita_val <= 99):
+                errors["disponibilita"] = "Disponibilità deve essere tra 0 e 99."
+        except:
+            errors["disponibilita"] = "Disponibilità non valida."
+
+        # Se ci sono errori, rimandiamo il form con i messaggi
+        if errors:
+            for field, msg in errors.items():
+                flash(f"{field.capitalize()}: {msg}", "error")
+            return render_template("inserisci_gomme.html", marche=marche, values=values)
+
+        # Inserimento o aggiornamento sicuro
+        try:
             conn = get_db_connection()
             cur = conn.cursor()
-
             cur.execute("""
-                INSERT INTO gomme (marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO gomme 
+                    (marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (marca, larghezza, rapporto, diametro) DO UPDATE
                 SET prezzo_unitario = EXCLUDED.prezzo_unitario,
                     prezzo_treno = EXCLUDED.prezzo_treno,
-                    disponibilita = EXCLUDED.disponibilita
-            """, (marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita))
-
+                    disponibilita = EXCLUDED.disponibilita,
+                    note = EXCLUDED.note
+            """, (
+                marca,
+                int(larghezza),
+                int(rapporto),
+                int(diametro),
+                prezzo_unitario_val,
+                prezzo_treno_val,
+                disponibilita_val,
+                note
+            ))
             conn.commit()
             cur.close()
             conn.close()
-
             flash("✅ Gomme inserite o aggiornate con successo!")
             return redirect(url_for("giacenza_gomme"))
 
         except Exception as e:
             app.logger.error(f"Errore durante l'inserimento gomme: {e}")
-            flash("❌ Errore durante l'inserimento delle gomme. Controlla i dati inseriti.")
-            return redirect(url_for("inserisci_gomme"))
+            flash(f"❌ Errore durante l'inserimento delle gomme: {e}")
+            return render_template("inserisci_gomme.html", marche=marche, values=values)
 
-    return render_template("inserisci_gomme.html", marche=marche)
-
+    return render_template("inserisci_gomme.html", marche=marche, values=values)
 
 @app.route("/giacenza_gomme")
 @login_required
@@ -1488,14 +1622,15 @@ def modifica_gomma(id):
         prezzo_unitario = float(request.form.get("prezzo_unitario", "0").replace(",", "."))
         prezzo_treno = float(request.form.get("prezzo_treno", "0").replace(",", "."))
         disponibilita = int(request.form.get("disponibilita", "0"))
+        note = request.form.get("note", "").strip()  # nuova riga note
 
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             UPDATE gomme
-            SET prezzo_unitario=%s, prezzo_treno=%s, disponibilita=%s
+            SET prezzo_unitario=%s, prezzo_treno=%s, disponibilita=%s, note=%s
             WHERE id=%s
-        """, (prezzo_unitario, prezzo_treno, disponibilita, id))
+        """, (prezzo_unitario, prezzo_treno, disponibilita, note, id))
         conn.commit()
         cur.close()
         conn.close()
@@ -1505,7 +1640,6 @@ def modifica_gomma(id):
         flash("❌ Errore durante la modifica.")
 
     return redirect(url_for("giacenza_gomme"))
-
 
 @app.route("/elimina_gomma/<int:id>", methods=["POST"])
 @login_required
