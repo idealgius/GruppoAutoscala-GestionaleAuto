@@ -98,7 +98,6 @@
 
 .action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
 
-/* Pulsanti modifica ed elimina */
 .modifica-btn {
   background-color: #f4a300;
   color: white;
@@ -126,4 +125,21 @@
 .modifica-btn:hover { background-color: #ffb700; }
 .elimina-btn:hover { background-color: #c9302c; }
 </style>
+
+<!-- 🔥 SCRIPT PER NON PERDERE LA POSIZIONE DELLA PAGINA -->
+<script>
+// Salva la posizione dello scroll PRIMA di lasciare la pagina
+window.addEventListener("beforeunload", function() {
+    localStorage.setItem("scroll_ricambi", window.scrollY);
+});
+
+// Ripristina la posizione dello scroll al caricamento
+window.addEventListener("load", function() {
+    const pos = localStorage.getItem("scroll_ricambi");
+    if (pos !== null) {
+        window.scrollTo(0, parseInt(pos));
+    }
+});
+</script>
+
 {% endblock %}

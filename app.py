@@ -662,51 +662,98 @@ def elimina_modello(id):
 @app.route('/ricambi')
 @login_required
 def lista_ricambi():
+    prefisso = request.args.get('prefisso', '').strip().upper()
+    ricerca = request.args.get('q', '').strip()
     marca = request.args.get('marca')
     modello = request.args.get('modello')
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    try:
-        if marca and modello:
-            cur.execute("""
-                SELECT r.* FROM ricambi r
-                JOIN modelli m ON r.modello_id = m.id
-                WHERE LOWER(m.marca)=LOWER(%s) AND LOWER(m.modello)=LOWER(%s)
-                ORDER BY r.id
-            """, (marca, modello))
-        else:
-            cur.execute("SELECT * FROM ricambi ORDER BY id")
-        ricambi = cur.fetchall()
-    finally:
-        conn.close()
-    return render_template('ricambi.html', ricambi=ricambi)
 
-@app.route('/aggiungi_ricambio', methods=['POST'])
+    query = "SELECT * FROM ricambi WHERE 1=1"
+    params = []
+
+    # Filtro prefisso
+    if prefisso:
+        query += " AND codice ILIKE %s"
+        params.append(prefisso + "%")
+
+    # Ricerca codice (anche ultime cifre)
+    if ricerca:
+        query += " AND codice ILIKE %s"
+        params.append("%" + ricerca + "%")
+
+    # Filtro marca + modello
+    if marca and modello:
+        query = """
+            SELECT r.* FROM ricambi r
+            JOIN modelli m ON r.modello_id = m.id
+            WHERE LOWER(m.marca)=LOWER(%s)
+            AND LOWER(m.modello)=LOWER(%s)
+        """
+        params = [marca, modello]
+
+        # Se presenti anche prefisso o ricerca, li aggiungiamo
+        if prefisso:
+            query += " AND r.codice ILIKE %s"
+            params.append(prefisso + "%")
+
+        if ricerca:
+            query += " AND r.codice ILIKE %s"
+            params.append("%" + ricerca + "%")
+
+    query += " ORDER BY id"
+
+    cur.execute(query, params)
+    ricambi = cur.fetchall()
+    conn.close()
+
+    return render_template(
+        'ricambi.html',
+        ricambi=ricambi,
+        ricerca=ricerca,
+        filtro_prefisso=prefisso
+    )
+
+@app.route('/aggiungi_ricambio', methods=['POST', 'GET'])
 @login_required
 def aggiungi_ricambio():
-    nome = request.form['nome']
-    codice = request.form['codice']
-    prezzo = request.form['prezzo']
-    prefisso = (codice or '')[:3].upper()
+    if request.method == 'GET':
+        # Se qualcuno prova ad aprire la route direttamente
+        return redirect(url_for('inserisci_ricambio'))
+
+    nome = request.form.get('nome')
+    codice = request.form.get('codice')
+    prefisso = request.form.get('prefisso', '').upper()
+
+    if prefisso and not codice.upper().startswith(prefisso):
+        codice = f"{prefisso} {codice.strip()}"
 
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
-            INSERT INTO ricambi (nome, codice, prezzo, prefisso, utente_id)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO ricambi (nome, codice, quantita, utente_id)
+            VALUES (%s, %s, %s, %s)
             RETURNING id
-        """, (nome, codice, prezzo, prefisso, session['user_id']))
+        """, (nome, codice, 0, session['user_id']))
         new_id = cur.fetchone()[0]
         conn.commit()
     finally:
         conn.close()
+
     try:
         log_storico(session['user_id'], f"Aggiunto ricambio {new_id}: {nome}", "ricambi", new_id)
     except Exception:
         pass
+
     flash('Ricambio aggiunto con successo!', 'success')
     return redirect(url_for('lista_ricambi'))
+
+@app.route('/inserisci_ricambio')
+@login_required
+def inserisci_ricambio():
+    return render_template('inserisci_ricambio.html')
 
 @app.route('/elimina_ricambio/<int:id>', methods=['POST'])
 @login_required
@@ -1596,7 +1643,7 @@ def giacenza_gomme():
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
-            SELECT id, marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita
+            SELECT id, marca, larghezza, rapporto, diametro, prezzo_unitario, prezzo_treno, disponibilita, note
             FROM gomme
             ORDER BY marca, larghezza, rapporto, diametro
         """)

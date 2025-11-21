@@ -5,12 +5,23 @@
 {% block content %}
 <h1>➕ Inserisci Ricambio</h1>
 
-<form action="/salva_ricambio" method="POST" style="max-width:600px; margin:0 auto;">
+<form action="/aggiungi_ricambio" method="POST" style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:12px;">
+
     <label for="nome">Nome ricambio:</label>
-    <input type="text" id="nome" name="nome" required value="{{ request.form.get('nome') or '' }}">
+    <input type="text" id="nome" name="nome" required value="{{ request.form.get('nome') or '' }}" placeholder="Esempio: Filtro Olio">
+
+    <label for="prefisso">Prefisso (opzionale):</label>
+    <select id="prefisso" name="prefisso">
+        <option value="">Nessuno</option>
+        <option value="BH" {% if request.form.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
+        <option value="MM" {% if request.form.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
+        <option value="COF" {% if request.form.get('prefisso') == 'COF' %}selected{% endif %}>COF</option>
+        <option value="XEN" {% if request.form.get('prefisso') == 'XEN' %}selected{% endif %}>XEN</option>
+        <option value="MIC" {% if request.form.get('prefisso') == 'MIC' %}selected{% endif %}>MIC</option>
+    </select>
 
     <label for="codice">Codice (unico):</label>
-    <input type="text" id="codice" name="codice" required value="{{ request.form.get('codice') or '' }}">
+    <input type="text" id="codice" name="codice" required value="{{ request.form.get('codice') or '' }}" placeholder="Inserisci il codice del ricambio">
 
     <button type="submit">💾 Salva Ricambio</button>
 </form>

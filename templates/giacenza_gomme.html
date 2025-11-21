@@ -67,13 +67,16 @@
                                 {% if solo_lettura %}disabled{% endif %}>+</button>
                     </div>
 
-                    <!-- NOTE -->
+                    <!-- NOTE PROFESSIONALI -->
                     <div style="margin-top:12px;">
                         <label><strong>Note:</strong></label><br>
-                        <textarea class="nota-gomma"
-                                  rows="2"
-                                  style="width:95%; resize:vertical;"
-                                  {% if solo_lettura %}readonly{% endif %}>{{ g.note or '' }}</textarea>
+                        <div class="nota-gomma-box" style="background:#fff; border:1px solid #ccc; padding:8px; border-radius:6px; min-height:50px; position:relative;">
+                            <span class="nota-gomma-text">{{ g.note or 'Nessuna nota' }}</span>
+                            {% if not solo_lettura %}
+                            <textarea class="nota-gomma" style="width:100%; display:none; resize:vertical; min-height:50px;">{{ g.note or '' }}</textarea>
+                            <button class="edit-nota" style="position:absolute; top:5px; right:5px; font-size:0.85em; padding:2px 6px; cursor:pointer;">✏ Modifica</button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -124,7 +127,20 @@ document.querySelectorAll('.gomma-item').forEach(div => {
     const qta = div.querySelector('.quantita');
     const prezzoUnit = div.querySelector('.prezzo-unitario');
     const prezzoTreno = div.querySelector('.prezzo-treno');
-    const note = div.querySelector('.nota-gomma');
+
+    // NOTE PROFESSIONALI
+    const notaBox = div.querySelector('.nota-gomma-box');
+    const notaText = notaBox.querySelector('.nota-gomma-text');
+    const notaTextarea = notaBox.querySelector('.nota-gomma');
+    const editBtn = notaBox.querySelector('.edit-nota');
+
+    if(editBtn){
+        editBtn.addEventListener('click', () => {
+            notaText.style.display = 'none';
+            notaTextarea.style.display = 'block';
+            notaTextarea.focus();
+        });
+    }
 
     // Incrementa
     div.querySelector('.inc-disponibilita').addEventListener('click', () => {
@@ -141,15 +157,18 @@ document.querySelectorAll('.gomma-item').forEach(div => {
     // Salvataggio
     div.querySelector('.save-gomma').addEventListener('click', async () => {
         const formData = new FormData();
-        formData.append("prezzo_unitario", prezzoUnit.value);
-        formData.append("prezzo_treno", prezzoTreno.value);
+        formData.append("prezzo_unitario", prezzoUnit.value.trim());
+        formData.append("prezzo_treno", prezzoTreno.value.trim());
         formData.append("disponibilita", qta.textContent);
-        formData.append("note", note.value);
+        formData.append("note", notaTextarea.value.trim());
 
         try {
             const res = await fetch(`/modifica_gomma/${id}`, { method: "POST", body: formData });
             if(res.ok){
                 alert("✔ Gomma aggiornata correttamente.");
+                notaText.textContent = notaTextarea.value.trim() || 'Nessuna nota';
+                notaTextarea.style.display = 'none';
+                notaText.style.display = 'block';
             } else {
                 alert("❌ Errore durante l'aggiornamento.");
             }
