@@ -13,11 +13,15 @@
     <label for="prefisso">Prefisso (opzionale):</label>
     <select id="prefisso" name="prefisso">
         <option value="">Nessuno</option>
-        <option value="BH" {% if request.form.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
-        <option value="MM" {% if request.form.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
+
+        <option value="BH"  {% if request.form.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
+        <option value="MM"  {% if request.form.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
         <option value="COF" {% if request.form.get('prefisso') == 'COF' %}selected{% endif %}>COF</option>
         <option value="XEN" {% if request.form.get('prefisso') == 'XEN' %}selected{% endif %}>XEN</option>
         <option value="MIC" {% if request.form.get('prefisso') == 'MIC' %}selected{% endif %}>MIC</option>
+
+        <!-- ✅ NUOVO PREFISSO -->
+        <option value="JAP" {% if request.form.get('prefisso') == 'JAP' %}selected{% endif %}>JAP</option>
     </select>
 
     <label for="codice">Codice (unico):</label>

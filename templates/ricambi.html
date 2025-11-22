@@ -9,11 +9,15 @@
 <form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
   <select name="prefisso" style="padding:6px; min-width:180px;">
     <option value="">-- Filtra per prefisso (facoltativo) --</option>
-    <option value="BH" {% if filtro_prefisso == 'BH' %}selected{% endif %}>BH</option>
-    <option value="MM" {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
+
+    <option value="BH"  {% if filtro_prefisso == 'BH' %}selected{% endif %}>BH</option>
+    <option value="MM"  {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
     <option value="COF" {% if filtro_prefisso == 'COF' %}selected{% endif %}>COF</option>
     <option value="XEN" {% if filtro_prefisso == 'XEN' %}selected{% endif %}>XEN</option>
     <option value="MIC" {% if filtro_prefisso == 'MIC' %}selected{% endif %}>MIC</option>
+
+    <!-- ✅ NUOVO PREFISSO Aggiunto correttamente -->
+    <option value="JAP" {% if filtro_prefisso == 'JAP' %}selected{% endif %}>JAP</option>
   </select>
 
   <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ ricerca }}" style="flex:1; padding:6px;">
