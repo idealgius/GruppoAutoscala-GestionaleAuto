@@ -3,7 +3,26 @@
 {% block title %}Ricambi per Modello{% endblock %}
 
 {% block content %}
-<h1>🔗 Ricambi per: {{ modello['marca'] }} {{ modello['modello'] }}</h1>
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap: wrap;">
+  <h1>🔗 Ricambi per: {{ modello['marca'] }} {{ modello['modello'] }}</h1>
+
+  <!-- Pulsante Veicolo -->
+  <form action="{{ url_for('usa_veicolo', modello_id=modello['id']) }}" method="POST" style="display:inline;">
+      <button type="submit" style="
+          background-color: red; 
+          border: 2px solid black; 
+          border-radius: 8px; 
+          padding: 6px 12px; 
+          color: white; 
+          font-size:1em;
+          display:flex; 
+          align-items:center; 
+          gap:4px;
+          cursor:pointer;">
+          🚗 Usa veicolo
+      </button>
+  </form>
+</div>
 
 <div style="display:flex; gap:20px; align-items:center; margin-bottom:18px; flex-wrap: wrap;">
   <a class="button" href="{{ url_for('lista_modelli') }}">🔙 Torna ai modelli</a>

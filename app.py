@@ -942,6 +942,36 @@ def rimuovi_ricambio_da_modello(modello_id, ricambio_id):
 
     return redirect(url_for('modello_ricambi', modello_id=modello_id))
 
+@app.route('/modello/<int:modello_id>/usa_veicolo', methods=['POST'])
+def usa_veicolo(modello_id):
+    # Connessione al database Supabase
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    try:
+        # Recupera tutti i ricambi associati a questo modello
+        cur.execute("""
+            SELECT r.id, r.quantita
+            FROM ricambi r
+            JOIN modelli_ricambi mr ON r.id = mr.ricambio_id
+            WHERE mr.modello_id = %s
+        """, (modello_id,))
+        associati = cur.fetchall()
+
+        # Decrementa la quantità di 1 se maggiore di 0
+        for r in associati:
+            nuova_quantita = max(r['quantita'] - 1, 0)
+            cur.execute("UPDATE ricambi SET quantita = %s WHERE id = %s",
+                        (nuova_quantita, r['id']))
+        
+        conn.commit()
+        flash("Giacenze aggiornate per tutti i ricambi di questo modello.", "success")
+    finally:
+        conn.close()
+
+    # Redirect al template corretto
+    return redirect(url_for('modello_ricambi', modello_id=modello_id))
+
 @app.route('/ricambi/aggiorna_giacenza/<int:ricambio_id>', methods=['POST'])
 @login_required
 def aggiorna_giacenza(ricambio_id):
