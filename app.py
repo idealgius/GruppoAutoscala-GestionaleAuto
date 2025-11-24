@@ -1561,7 +1561,7 @@ def inserisci_gomme():
         flash("Accesso negato.")
         return redirect(url_for('scelta_login'))
 
-    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Kumho", "Ling Long", "Michelin", "Pirelli"]
+    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Kleber", "Kumho", "Ling Long", "Michelin", "Pirelli"]
     marche.sort()
 
     # Manteniamo i valori inseriti
