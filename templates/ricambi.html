@@ -5,35 +5,37 @@
 {% block content %}
 <h1>🔧 Elenco Ricambi</h1>
 
-<!-- Filtro prefisso e barra di ricerca in un unico form -->
-<form method="GET" action="/ricambi" style="margin-bottom:16px; display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
-  <select name="prefisso" style="padding:6px; min-width:180px;">
-    <option value="">-- Filtra per prefisso (facoltativo) --</option>
-
+<!-- FILTRI -->
+<form method="GET" action="/ricambi"
+      style="margin-bottom:16px; display:flex; align-items:center; gap:8px; flex-wrap: wrap;">
+  
+  <select name="prefisso" class="select-filter">
+    <option value="">-- Filtra per prefisso --</option>
     <option value="BH"  {% if filtro_prefisso == 'BH' %}selected{% endif %}>BH</option>
     <option value="MM"  {% if filtro_prefisso == 'MM' %}selected{% endif %}>MM</option>
     <option value="COF" {% if filtro_prefisso == 'COF' %}selected{% endif %}>COF</option>
     <option value="XEN" {% if filtro_prefisso == 'XEN' %}selected{% endif %}>XEN</option>
     <option value="MIC" {% if filtro_prefisso == 'MIC' %}selected{% endif %}>MIC</option>
-
-    <!-- ✅ NUOVO PREFISSO Aggiunto correttamente -->
     <option value="JAP" {% if filtro_prefisso == 'JAP' %}selected{% endif %}>JAP</option>
   </select>
 
-  <input type="text" name="q" placeholder="Cerca per codice o ultime cifre..." value="{{ ricerca }}" style="flex:1; padding:6px;">
-  
-  <button type="submit" class="button" style="padding:6px 12px;">🔍 Applica</button>
+  <input type="text" name="q" placeholder="Cerca per codice o ultima parte..."
+         value="{{ ricerca }}" class="search-box">
+
+  <button type="submit" class="button small">🔍 Cerca</button>
 
   {% if ricerca or filtro_prefisso %}
-    <a href="/ricambi" class="button" style="padding:6px 12px; background-color:#ccc;">🔄 Reset</a>
+    <a href="/ricambi" class="button small reset-btn">🔄 Reset</a>
   {% endif %}
 </form>
 
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap: wrap;">
-  <a href="/inserisci_ricambio" class="button">➕ Inserisci Ricambio</a>
+<!-- INSERISCI RICAMBIO -->
+<div class="top-actions">
+  <a href="/inserisci_ricambio" class="button add-btn">➕ Inserisci Ricambio</a>
 </div>
 
-<table>
+<!-- TABELLA -->
+<table class="styled-table">
   <thead>
     <tr>
       <th>ID</th>
@@ -49,33 +51,45 @@
       <tr>
         <td>{{ r['id'] }}</td>
         <td>{{ r['nome']|safe }}</td>
-        <td>{{ r['codice']|safe }}</td>
+
+        <!-- CODICE + ICONA INFO -->
+        <td>
+          {{ r['codice']|safe }}
+
+          {% if r.get('sost_codice') %}
+          <button class="info-btn"
+                  onclick="mostraInfo('{{ r['codice'] }}','{{ r['sost_codice'] }}')">
+            ℹ️
+          </button>
+          {% endif %}
+        </td>
+
         <td>
           {{ r['quantita'] }}
+
           {% if r['quantita'] <= 2 %}
             {% if r['quantita'] == 0 %}
               <span class="badge danger">❌ Esaurito</span>
             {% elif r['quantita'] == 1 %}
-              <span class="badge warning">⚠️ Solo 1 rimasto</span>
+              <span class="badge warning">⚠️ Solo 1</span>
             {% else %}
-              <span class="badge low-stock">⚠️ Giacenza bassa</span>
+              <span class="badge low-stock">⚠️ Bassa</span>
             {% endif %}
           {% endif %}
 
           {% if session.get('username') == 'G.AS_Giuseppe.Palladino' %}
-          <!-- Pulsanti gestione giacenze -->
-          <div style="display:inline-flex; gap:4px; margin-left:6px;">
-            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
+          <div class="stock-buttons">
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}">
               <input type="hidden" name="azione" value="incrementa">
-              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">➕</button>
+              <button class="stock-btn">➕</button>
             </form>
-            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}">
               <input type="hidden" name="azione" value="decrementa">
-              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">➖</button>
+              <button class="stock-btn">➖</button>
             </form>
-            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}" style="display:inline;">
-              <input type="number" name="nuova_quantita" min="0" style="width:50px; padding:2px;">
-              <button type="submit" class="button" style="padding:2px 6px; font-size:0.8em;">✏️</button>
+            <form method="POST" action="/ricambi/aggiorna_giacenza/{{ r['id'] }}">
+              <input type="number" name="nuova_quantita" min="0" class="stock-input">
+              <button class="stock-btn">✏️</button>
             </form>
           </div>
           {% endif %}
@@ -83,66 +97,107 @@
 
         <td class="action-buttons">
           <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica-btn">✏️</a>
-          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina-btn" onclick="return confirm('Eliminare questo ricambio?')">🗑️</a>
+          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina-btn"
+             onclick="return confirm('Eliminare questo ricambio?')">🗑️</a>
         </td>
       </tr>
       {% endfor %}
     {% else %}
       <tr>
-        <td colspan="5" style="text-align:center; color:red;">Il codice che stai cercando non è presente.</td>
+        <td colspan="5" class="no-results">Nessun ricambio trovato.</td>
       </tr>
     {% endif %}
   </tbody>
 </table>
 
+<!-- POPUP INFO -->
+<div id="infoBox" class="info-popup">
+  <h3>🔁 Ricambio Alternativo</h3>
+  <p id="infoContent"></p>
+  <button onclick="chiudiInfo()" class="button small">Chiudi</button>
+</div>
+
 <style>
-.badge.danger { color: red; font-weight: bold; }
-.badge.warning { color: orange; font-weight: bold; }
-.badge.low-stock { color: darkorange; font-weight: bold; }
+/* 🔵 Migliorie estetiche */
+.styled-table { width: 100%; border-collapse: collapse; }
+.styled-table thead tr { background: #004c99; color: white; }
+.styled-table td, .styled-table th { padding: 10px; border-bottom: 1px solid #ccc; }
 
-.action-buttons { display: flex; gap: 6px; justify-content: center; align-items: center; }
+.select-filter, .search-box { padding: 6px; border-radius: 6px; border: 1px solid #bbb; }
 
-.modifica-btn {
-  background-color: #f4a300;
+.button.small { padding: 6px 10px; font-size: 0.9em; }
+.reset-btn { background: #999; }
+
+.add-btn { background: #1b8f3e; color: white; }
+
+.info-btn {
+  background: #0066cc;
+  border: none;
+  border-radius: 6px;
   color: white;
+  padding: 2px 6px;
+  font-size: 0.8em;
+  margin-left: 6px;
+  cursor: pointer;
+}
+.info-btn:hover { background: #3388dd; }
+
+.badge { font-weight: bold; margin-left: 6px; }
+.badge.danger { color: red; }
+.badge.warning { color: orange; }
+.badge.low-stock { color: darkorange; }
+
+.stock-buttons { display: inline-flex; gap: 4px; margin-left: 6px; }
+.stock-btn { padding: 2px 6px; font-size: 0.8em; }
+.stock-input { width: 45px; padding: 2px; }
+
+.modifica-btn, .elimina-btn {
   padding: 6px 10px;
   border-radius: 8px;
-  text-decoration: none;
   font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.elimina-btn {
-  background-color: #d9534f;
   color: white;
-  padding: 6px 10px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: bold;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+}
+.modifica-btn { background: #f4a300; }
+.elimina-btn { background: #d9534f; }
+
+.modifica-btn:hover { background: #ffb700; }
+.elimina-btn:hover { background: #c9302c; }
+
+.info-popup {
+  position: fixed;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 0 12px rgba(0,0,0,0.3);
+  display: none;
+  z-index: 9999;
 }
 
-.modifica-btn:hover { background-color: #ffb700; }
-.elimina-btn:hover { background-color: #c9302c; }
+.no-results { text-align: center; color: red; font-weight: bold; }
 </style>
 
-<!-- 🔥 SCRIPT PER NON PERDERE LA POSIZIONE DELLA PAGINA -->
 <script>
-// Salva la posizione dello scroll PRIMA di lasciare la pagina
-window.addEventListener("beforeunload", function() {
-    localStorage.setItem("scroll_ricambi", window.scrollY);
-});
+function mostraInfo(codice, sostituto) {
+  document.getElementById("infoContent").innerHTML =
+    "Il ricambio <b>" + codice + "</b> è sostituibile con <b>" + sostituto + "</b>.";
+  document.getElementById("infoBox").style.display = "block";
+}
+function chiudiInfo() {
+  document.getElementById("infoBox").style.display = "none";
+}
 
-// Ripristina la posizione dello scroll al caricamento
-window.addEventListener("load", function() {
-    const pos = localStorage.getItem("scroll_ricambi");
-    if (pos !== null) {
-        window.scrollTo(0, parseInt(pos));
-    }
+// Scroll restore
+window.addEventListener("beforeunload", () => {
+  localStorage.setItem("scroll_ricambi", window.scrollY)
+});
+window.addEventListener("load", () => {
+  const pos = localStorage.getItem("scroll_ricambi");
+  if (pos !== null) window.scrollTo(0, parseInt(pos));
 });
 </script>
 

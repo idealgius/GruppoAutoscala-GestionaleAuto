@@ -5,11 +5,20 @@
 {% block content %}
 <h1>➕ Inserisci Ricambio</h1>
 
-<form action="/aggiungi_ricambio" method="POST" style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:12px;">
+<form action="/aggiungi_ricambio" method="POST"
+      style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:14px;">
 
+    <!-- =============================== -->
+    <!-- NOME                            -->
+    <!-- =============================== -->
     <label for="nome">Nome ricambio:</label>
-    <input type="text" id="nome" name="nome" required value="{{ request.form.get('nome') or '' }}" placeholder="Esempio: Filtro Olio">
+    <input type="text" id="nome" name="nome" required
+           value="{{ request.form.get('nome') or '' }}"
+           placeholder="Esempio: Filtro Olio">
 
+    <!-- =============================== -->
+    <!-- PREFISSO CODICE PRINCIPALE      -->
+    <!-- =============================== -->
     <label for="prefisso">Prefisso (opzionale):</label>
     <select id="prefisso" name="prefisso">
         <option value="">Nessuno</option>
@@ -19,18 +28,45 @@
         <option value="COF" {% if request.form.get('prefisso') == 'COF' %}selected{% endif %}>COF</option>
         <option value="XEN" {% if request.form.get('prefisso') == 'XEN' %}selected{% endif %}>XEN</option>
         <option value="MIC" {% if request.form.get('prefisso') == 'MIC' %}selected{% endif %}>MIC</option>
-
-        <!-- ✅ NUOVO PREFISSO -->
         <option value="JAP" {% if request.form.get('prefisso') == 'JAP' %}selected{% endif %}>JAP</option>
     </select>
 
+    <!-- =============================== -->
+    <!-- CODICE PRINCIPALE               -->
+    <!-- =============================== -->
     <label for="codice">Codice (unico):</label>
-    <input type="text" id="codice" name="codice" required value="{{ request.form.get('codice') or '' }}" placeholder="Inserisci il codice del ricambio">
+    <input type="text" id="codice" name="codice" required
+           value="{{ request.form.get('codice') or '' }}"
+           placeholder="Inserisci il codice del ricambio">
 
-    <button type="submit">💾 Salva Ricambio</button>
+
+    <!-- ========================================================= -->
+    <!-- 🔁 RICAMBIO SOSTITUENTE (SOLO MENÙ A TENDINA)              -->
+    <!-- ========================================================= -->
+    <h3 style="margin-top:20px;">🔁 Ricambio Sostituente (opzionale)</h3>
+
+    <label for="sost_codice_select">Seleziona ricambio sostituente:</label>
+    <select id="sost_codice_select" name="sost_codice_select">
+        <option value="">Nessuno</option>
+
+        {% for r in ricambi %}
+            <option value="{{ r['codice'] }}"
+                {% if request.form.get('sost_codice_select') == r['codice'] %}selected{% endif %}>
+                {{ r['codice'] }} — {{ r['nome'] }}
+            </option>
+        {% endfor %}
+    </select>
+
+
+    <!-- =============================== -->
+    <!-- SALVA                           -->
+    <!-- =============================== -->
+    <button type="submit" class="button">💾 Salva Ricambio</button>
+
 </form>
 
 <div style="text-align:center; margin-top:20px;">
   <a class="button" href="/ricambi">🔙 Torna ai ricambi</a>
 </div>
+
 {% endblock %}

@@ -15,23 +15,56 @@
   {% endif %}
 {% endwith %}
 
-<form action="/aggiorna_ricambio/{{ ricambio['id'] }}" method="POST" style="max-width:600px; margin:0 auto;">
+<form action="/aggiorna_ricambio/{{ ricambio['id'] }}" method="POST"
+      style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:14px;">
+
+    <!-- NOME -->
     <label for="nome">Nome ricambio:</label>
-    <input type="text" id="nome" name="nome" value="{{ ricambio['nome'] }}" required>
+    <input type="text" id="nome" name="nome"
+           value="{{ ricambio['nome'] }}" required>
 
+    <!-- CODICE -->
     <label for="codice">Codice (unico):</label>
-    <input type="text" id="codice" name="codice" value="{{ ricambio['codice'] }}" required>
+    <input type="text" id="codice" name="codice"
+           value="{{ ricambio['codice'] }}" required>
 
+    <!-- QUANTITÀ -->
     <label for="quantita">Quantità:</label>
-    <input type="number" id="quantita" name="quantita" value="{{ ricambio['quantita'] }}" min="0" required>
+    <input type="number" id="quantita" name="quantita"
+           value="{{ ricambio['quantita'] }}" min="0" required>
 
+    <!-- ============================= -->
+    <!-- 🔁 RICAMBIO SOSTITUTO         -->
+    <!-- ============================= -->
+
+    <h3 style="margin-top:20px;">🔁 Ricambio Sostituente (opzionale)</h3>
+
+    <label for="sost_codice_select">Seleziona ricambio sostituente:</label>
+    <select id="sost_codice_select" name="sost_codice_select">
+        <option value="">Nessuno</option>
+
+        {% for r in ricambi %}
+            <option value="{{ r['codice'] }}"
+                {% if sostitutivo_corrente == r['codice'] %}selected{% endif %}>
+                {{ r['codice'] }} — {{ r['nome'] }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <small style="color:#666;">
+        Scegli il ricambio sostituente dall’elenco. Nessun inserimento manuale è richiesto.
+    </small>
+
+    <!-- PASSWORD -->
     <label for="password">🔑 Inserisci la tua password per confermare:</label>
-    <input type="password" id="password" name="password" placeholder="Password" required>
+    <input type="password" id="password" name="password"
+           placeholder="Password" required>
 
-    <button type="submit">💾 Salva modifiche</button>
+    <button type="submit" class="button">💾 Salva modifiche</button>
 </form>
 
 <div style="text-align:center; margin-top:20px;">
   <a class="button" href="/ricambi">🔙 Torna ai ricambi</a>
 </div>
+
 {% endblock %}

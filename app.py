@@ -664,48 +664,45 @@ def elimina_modello(id):
 def lista_ricambi():
     prefisso = request.args.get('prefisso', '').strip().upper()
     ricerca = request.args.get('q', '').strip()
-    marca = request.args.get('marca')
-    modello = request.args.get('modello')
 
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
+    # ----------------------------
+    # COSTRUISCO QUERY PRINCIPALE
+    # ----------------------------
     query = "SELECT * FROM ricambi WHERE 1=1"
     params = []
 
-    # Filtro prefisso
     if prefisso:
         query += " AND codice ILIKE %s"
         params.append(prefisso + "%")
 
-    # Ricerca codice (anche ultime cifre)
     if ricerca:
         query += " AND codice ILIKE %s"
         params.append("%" + ricerca + "%")
-
-    # Filtro marca + modello
-    if marca and modello:
-        query = """
-            SELECT r.* FROM ricambi r
-            JOIN modelli m ON r.modello_id = m.id
-            WHERE LOWER(m.marca)=LOWER(%s)
-            AND LOWER(m.modello)=LOWER(%s)
-        """
-        params = [marca, modello]
-
-        # Se presenti anche prefisso o ricerca, li aggiungiamo
-        if prefisso:
-            query += " AND r.codice ILIKE %s"
-            params.append(prefisso + "%")
-
-        if ricerca:
-            query += " AND r.codice ILIKE %s"
-            params.append("%" + ricerca + "%")
 
     query += " ORDER BY id"
 
     cur.execute(query, params)
     ricambi = cur.fetchall()
+
+    # -------------------------------------------
+    # 🔁 CARICO RICAMBI SOSTITUENTI
+    # -------------------------------------------
+    cur.execute("""
+        SELECT codice, codice_sostituto
+        FROM ricambi_sostituti
+    """)
+    sostituti_raw = cur.fetchall()
+
+    # Mappa codice → codice_sostituto
+    sost_map = {row['codice']: row['codice_sostituto'] for row in sostituti_raw}
+
+    # Aggiungo info sostituto a ogni ricambio
+    for r in ricambi:
+        r['sost_codice'] = sost_map.get(r['codice'])
+
     conn.close()
 
     return render_template(
@@ -719,29 +716,60 @@ def lista_ricambi():
 @login_required
 def aggiungi_ricambio():
     if request.method == 'GET':
-        # Se qualcuno prova ad aprire la route direttamente
         return redirect(url_for('inserisci_ricambio'))
 
     nome = request.form.get('nome')
     codice = request.form.get('codice')
     prefisso = request.form.get('prefisso', '').upper()
 
+    # Applica prefisso al codice principale
     if prefisso and not codice.upper().startswith(prefisso):
         codice = f"{prefisso} {codice.strip()}"
 
+    # -----------------------------------------------------
+    # 🔁 NUOVA LOGICA — SOLO MENÙ SOSTITUENTE
+    # -----------------------------------------------------
+    sostitutivo = request.form.get('sost_codice_select')
+
     conn = get_db_connection()
     cur = conn.cursor()
+
     try:
+        # Inserimento ricambio principale
         cur.execute("""
             INSERT INTO ricambi (nome, codice, quantita, utente_id)
             VALUES (%s, %s, %s, %s)
             RETURNING id
         """, (nome, codice, 0, session['user_id']))
+
         new_id = cur.fetchone()[0]
+
+        # -----------------------------------------------------
+        # 🔁 INSERIMENTO SOSTITUTO BIDIREZIONALE (SE PRESENTE)
+        # -----------------------------------------------------
+        if sostitutivo and sostitutivo != "":
+            # A → B
+            cur.execute("""
+                INSERT INTO ricambi_sostituti (codice, codice_sostituto)
+                VALUES (%s, %s)
+                ON CONFLICT (codice) DO UPDATE SET
+                    codice_sostituto = EXCLUDED.codice_sostituto
+            """, (codice, sostitutivo))
+
+            # B → A (collegamento reciproco)
+            cur.execute("""
+                INSERT INTO ricambi_sostituti (codice, codice_sostituto)
+                VALUES (%s, %s)
+                ON CONFLICT (codice) DO UPDATE SET
+                    codice_sostituto = EXCLUDED.codice_sostituto
+            """, (sostitutivo, codice))
+
         conn.commit()
+
     finally:
         conn.close()
 
+    # Storico
     try:
         log_storico(session['user_id'], f"Aggiunto ricambio {new_id}: {nome}", "ricambi", new_id)
     except Exception:
@@ -753,60 +781,185 @@ def aggiungi_ricambio():
 @app.route('/inserisci_ricambio')
 @login_required
 def inserisci_ricambio():
-    return render_template('inserisci_ricambio.html')
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    # Recupera tutti i ricambi esistenti (usati per il menu sostituti)
+    cur.execute("SELECT codice, nome FROM ricambi ORDER BY codice")
+    ricambi = cur.fetchall()
+
+    conn.close()
+
+    return render_template('inserisci_ricambio.html', ricambi=ricambi)
 
 @app.route('/elimina_ricambio/<int:id>', methods=['POST'])
 @login_required
 def elimina_ricambio(id):
     conn = get_db_connection()
     cur = conn.cursor()
+
     try:
-        cur.execute("DELETE FROM ricambi WHERE id = %s AND utente_id=%s", (id, session['user_id']))
+        # 1️⃣ Recupero il codice SOLO se appartiene all'utente
+        cur.execute("""
+            SELECT codice 
+            FROM ricambi 
+            WHERE id = %s AND utente_id = %s
+        """, (id, session['user_id']))
+        
+        row = cur.fetchone()
+
+        if not row:
+            flash("Ricambio non trovato o non autorizzato.", "danger")
+            return redirect(url_for('lista_ricambi'))
+
+        codice = row[0]
+
+        # 2️⃣ Cancello solo i legami sostituzione collegati
+        cur.execute("""
+            DELETE FROM ricambi_sostituti 
+            WHERE codice = %s OR codice_sostituto = %s
+        """, (codice, codice))
+
+        # 3️⃣ Cancello il ricambio
+        cur.execute("""
+            DELETE FROM ricambi 
+            WHERE id = %s AND utente_id = %s
+        """, (id, session['user_id']))
+
         conn.commit()
+
     finally:
         conn.close()
+
+    # 4️⃣ Log storico
     try:
         log_storico(session['user_id'], f"Eliminato ricambio {id}", "ricambi", id)
     except Exception:
         pass
-    flash('Ricambio eliminato con successo.', 'info')
+
+    flash("Ricambio eliminato con successo.", "info")
     return redirect(url_for('lista_ricambi'))
 
 @app.route('/modifica_ricambio/<int:id>', methods=['GET', 'POST'])
 @login_required
 def modifica_ricambio(id):
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
+    # ==========================================================
+    # POST → AGGIORNA RICAMBIO
+    # ==========================================================
     if request.method == 'POST':
-        nome = request.form['nome']
-        codice = request.form['codice']
-        prezzo = request.form['prezzo']
-        prefisso = (codice or '')[:3].upper()
+
+        # Recupero vecchio codice
+        cur.execute("SELECT codice FROM ricambi WHERE id=%s", (id,))
+        old_row = cur.fetchone()
+
+        if not old_row:
+            cur.close()
+            flash("Ricambio non trovato.", "danger")
+            return redirect(url_for('lista_ricambi'))
+
+        old_codice = old_row['codice']
+
+        # Nuovi valori inviati dal form
+        nome = request.form.get('nome')
+        codice = request.form.get('codice')
+        quantita = request.form.get('quantita')
+
+        # Sostituente scelto dal menu (UNICA MODALITÀ)
+        sostitutivo = request.form.get('sost_codice_select')
+        if sostitutivo == "":
+            sostitutivo = None
+
         try:
+            # 1️⃣ Aggiorna ricambio principale
             cur.execute("""
                 UPDATE ricambi
-                SET nome=%s, codice=%s, prezzo=%s, prefisso=%s
+                SET nome=%s, codice=%s, quantita=%s
                 WHERE id=%s AND utente_id=%s
-            """, (nome, codice, prezzo, prefisso, id, session['user_id']))
+            """, (nome, codice, quantita, id, session['user_id']))
+
+            # 2️⃣ Elimina tutti i vecchi legami (A→B e B→A)
+            cur.execute("""
+                DELETE FROM ricambi_sostituti
+                WHERE codice=%s OR codice_sostituto=%s
+            """, (old_codice, old_codice))
+
+            # 3️⃣ Se è impostato un nuovo sostituto, ricrea legami A↔B
+            if sostitutivo:
+
+                # A → B
+                cur.execute("""
+                    INSERT INTO ricambi_sostituti (codice, codice_sostituto)
+                    VALUES (%s, %s)
+                    ON CONFLICT (codice) DO UPDATE SET
+                        codice_sostituto = EXCLUDED.codice_sostituto
+                """, (codice, sostitutivo))
+
+                # B → A
+                cur.execute("""
+                    INSERT INTO ricambi_sostituti (codice, codice_sostituto)
+                    VALUES (%s, %s)
+                    ON CONFLICT (codice) DO UPDATE SET
+                        codice_sostituto = EXCLUDED.codice_sostituto
+                """, (sostitutivo, codice))
+
             conn.commit()
-            try:
-                log_storico(session['user_id'], f"Aggiornato ricambio {id}: {nome}", "ricambi", id)
-            except Exception:
-                pass
-            flash('Ricambio modificato correttamente.', 'success')
+
         finally:
             conn.close()
+
+        # Storico
+        try:
+            log_storico(session['user_id'], f"Modificato ricambio {id}: {nome}", "ricambi", id)
+        except Exception:
+            pass
+
+        flash("Ricambio modificato correttamente.", "success")
         return redirect(url_for('lista_ricambi'))
 
-    # GET → mostra form
+    # ==========================================================
+    # GET → MOSTRA FORM
+    # ==========================================================
+
+    # Ricambio da modificare
     cur.execute("SELECT * FROM ricambi WHERE id=%s", (id,))
     ricambio = cur.fetchone()
-    cur.close()
+
     if not ricambio:
-        flash("Ricambio non trovato", 'danger')
+        cur.close()
+        flash("Ricambio non trovato.", "danger")
         return redirect(url_for('lista_ricambi'))
-    return render_template('modifica_ricambio.html', ricambio=ricambio)
+
+    # Recupero eventuale sostituente esistente
+    cur.execute("""
+        SELECT codice_sostituto
+        FROM ricambi_sostituti
+        WHERE codice=%s
+    """, (ricambio['codice'],))
+    row = cur.fetchone()
+
+    sostitutivo_corrente = row['codice_sostituto'] if row else None
+
+    # Tutti i ricambi disponibili per il menu (escluso se stesso)
+    cur.execute("""
+        SELECT codice, nome 
+        FROM ricambi
+        WHERE id != %s
+        ORDER BY nome ASC
+    """, (id,))
+    ricambi = cur.fetchall()
+
+    cur.close()
+
+    return render_template(
+        'modifica_ricambio.html',
+        ricambio=ricambio,
+        ricambi=ricambi,
+        sostitutivo_corrente=sostitutivo_corrente
+    )
 
 @app.route('/modello_ricambi/<int:modello_id>')
 @login_required
@@ -1561,7 +1714,9 @@ def inserisci_gomme():
         flash("Accesso negato.")
         return redirect(url_for('scelta_login'))
 
-    marche = ["Bridgestone", "Continental", "Goodyear", "Hankook", "Kleber", "Kumho", "Ling Long", "Michelin", "Pirelli"]
+    marche = ["Avon", "Barum", "Bridgestone", "Continental", 
+              "Goodyear", "Hankook", "Kleber", 
+              "Kumho", "Ling Long", "Michelin", "Ovation", "Pirelli"]
     marche.sort()
 
     # Manteniamo i valori inseriti
