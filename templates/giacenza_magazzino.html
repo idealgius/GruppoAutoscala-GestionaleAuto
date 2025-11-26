@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Giacenza Magazzino{% endblock %}
+
+{% block content %}
+<style>
+    .metal-box {
+        background: linear-gradient(180deg, #f5f5f5, #c0c0c0, #e0e0e0);
+        border: 3px solid #000;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+        color: #111;
+        text-transform: uppercase;
+        font-weight: bold;
+        border-bottom: 3px solid #7a0000;
+        padding-bottom: 6px;
+        margin-bottom: 25px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: linear-gradient(90deg, #7a0000, #e00000, #7a0000);
+        color: white;
+        padding: 12px;
+        text-align: center;
+        font-size: 15px;
+        border: 2px solid black;
+    }
+
+    td {
+        background: linear-gradient(90deg, #e6e6e6, #f7f7f7, #e6e6e6);
+        padding: 10px;
+        border: 1px solid #999;
+        text-align: center;
+    }
+
+    tr:nth-child(even) td {
+        background: linear-gradient(90deg, #cdcdcd, #e5e5e5, #cdcdcd);
+    }
+
+    .bollino {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 2px solid #000;
+    }
+
+    .inviato { background-color: #1e90ff; }
+    .arrivato { background-color: #ffd700; }
+    .appuntamento { background-color: #32cd32; }
+    .stock {
+        background: linear-gradient(90deg, #a8a8a8, #e0e0e0, #a8a8a8);
+    }
+
+    .btn-stato {
+        display: block;
+        margin: 4px 0;
+        padding: 6px;
+        border-radius: 8px;
+        border: 2px solid #000;
+        font-weight: bold;
+        cursor: pointer;
+        text-decoration: none;
+        transition: 0.2s;
+    }
+
+    .btn-inviato { background-color: #1e90ff; color: white; }
+    .btn-arrivato { background-color: #ffd700; color: black; }
+    .btn-app { background-color: #32cd32; color: white; }
+    .btn-stock { 
+        background: linear-gradient(90deg, #a8a8a8, #e0e0e0, #a8a8a8);
+        color: black;
+    }
+
+    .btn-stato:hover { transform: scale(1.07); }
+
+    .btn-elimina {
+        margin-top: 8px;
+        background: #222;
+        color: white;
+        border: 2px solid #000;
+        padding: 6px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+    }
+    .btn-elimina:hover { transform: scale(1.1); }
+</style>
+
+<div class="metal-box">
+    <h1>🏎️ Giacenza Magazzino</h1>
+
+    {% if ordini|length == 0 %}
+        <p>Nessun ordine presente in magazzino.</p>
+    {% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>Prodotto</th>
+                <th>Codice</th>
+                <th>Targa</th>
+                <th>Cliente</th>
+                <th>Stato</th>
+                <th>Bollino</th>
+                <th>Cambia Stato</th>
+                <th>Elimina</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ordine in ordini %}
+                <tr>
+                    <td>{{ ordine.prodotto }}</td>
+                    <td>{{ ordine.codice or "-" }}</td>
+                    <td>{{ ordine.targa }}</td>
+                    <td>{{ ordine.cliente }}</td>
+
+                    <td>{{ ordine.stato }}</td>
+
+                    <td>
+                        {% if ordine.stato == "Ordine Inviato" %}
+                            <span class="bollino inviato"></span>
+                        {% elif ordine.stato == "Ordine Arrivato" %}
+                            <span class="bollino arrivato"></span>
+                        {% elif ordine.stato == "Appuntamento Fissato" %}
+                            <span class="bollino appuntamento"></span>
+                        {% else %}
+                            <span class="bollino stock"></span>
+                        {% endif %}
+                    </td>
+
+                    <td style="width:160px;">
+                        {# ---------------------------- #}
+                        {#      STATO: ORDINE INVIATO  #}
+                        {# ---------------------------- #}
+                        {% if ordine.stato == "Ordine Inviato" %}
+                            <a class="btn-stato btn-arrivato"
+                               href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Ordine Arrivato') }}">
+                                Arrivato
+                            </a>
+                            <a class="btn-stato btn-app"
+                               href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Appuntamento Fissato') }}">
+                                Appuntamento
+                            </a>
+                            <a class="btn-stato btn-stock"
+                               href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='In Stock') }}">
+                                In Stock
+                            </a>
+                        {% endif %}
+
+                        {# ---------------------------- #}
+                        {#      STATO: ARRIVATO         #}
+                        {# ---------------------------- #}
+                        {% if ordine.stato == "Ordine Arrivato" %}
+                            <a class="btn-stato btn-app"
+                               href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Appuntamento Fissato') }}">
+                                Appuntamento
+                            </a>
+                            <a class="btn-stato btn-stock"
+                               href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='In Stock') }}">
+                                In Stock
+                            </a>
+                        {% endif %}
+
+                        {# ---------------------------- #}
+                        {#      STATI BLOCCATI          #}
+                        {# ---------------------------- #}
+                        {% if ordine.stato in ["Appuntamento Fissato", "In Stock"] %}
+                            <span style="font-size:13px; font-weight:bold; color:#444;">Stato Definitivo</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <a class="btn-elimina"
+                           onclick="return confirm('Eliminare definitivamente?')"
+                           href="{{ url_for('elimina_ordine', id=ordine.id) }}">
+                           X
+                        </a>
+                    </td>
+
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

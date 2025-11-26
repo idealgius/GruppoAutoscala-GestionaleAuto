@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Inserisci Ordine Magazzino{% endblock %}
+
+{% block content %}
+<style>
+    /* CONTENITORE METAL */
+    .metal-box {
+        background: linear-gradient(180deg, #f0f0f0, #c0c0c0, #e0e0e0);
+        border: 3px solid #000;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    }
+
+    h1 {
+        color: #111;
+        text-transform: uppercase;
+        font-weight: bold;
+        border-bottom: 3px solid #7a0000; /* rosso metal */
+        padding-bottom: 6px;
+        margin-bottom: 25px;
+    }
+
+    label {
+        font-weight: bold;
+        margin-top: 15px;
+        color: #111;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        margin-top: 6px;
+        border-radius: 8px;
+        border: 2px solid #333;
+        background: linear-gradient(90deg, #e8e8e8, #ffffff, #e8e8e8);
+        font-size: 15px;
+    }
+
+    .btn-metal {
+        margin-top: 25px;
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 2px solid #000;
+        font-size: 17px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .btn-rosso {
+        background: linear-gradient(90deg, #8b0000, #e60000, #8b0000);
+        color: white;
+    }
+    .btn-rosso:hover { transform: scale(1.05); }
+
+</style>
+
+<div class="metal-box">
+    <h1>🏎️ Inserisci Ordine Magazzino</h1>
+
+    <form method="POST" action="{{ url_for('salva_ordine_magazzino') }}">
+
+        <!-- PRODOTTO ORDINATO -->
+        <label for="prodotto">Prodotto Ordinato *</label>
+        <input type="text" id="prodotto" name="prodotto" required>
+
+        <!-- CODICE PRODOTTO (FACOLTATIVO) -->
+        <label for="codice">Codice Prodotto (facoltativo)</label>
+        <input type="text" id="codice" name="codice">
+
+        <!-- TARGA -->
+        <label for="targa">Targa Veicolo *</label>
+        <input type="text" id="targa" name="targa" required>
+
+        <!-- CLIENTE -->
+        <label for="cliente">Cliente (Nome + Cognome) *</label>
+        <input type="text" id="cliente" name="cliente" required>
+
+        <!-- STATO -->
+        <label for="stato">Stato Ordine *</label>
+        <select id="stato" name="stato" required>
+            <option value="In Stock">In Stock</option>
+            <option value="Ordine Inviato">Ordine Inviato</option>
+        </select>
+
+        <!-- BOTTONE -->
+        <button type="submit" class="btn-metal btn-rosso">✔️ Salva Ordine</button>
+
+    </form>
+</div>
+
+<script>
+/* VALIDAZIONE CLIENTE: deve contenere almeno 2 parole */
+document.querySelector("form").addEventListener("submit", function(e) {
+    const cliente = document.getElementById("cliente").value.trim();
+    if (cliente.split(" ").length < 2) {
+        alert("Inserire nome e cognome del cliente.");
+        e.preventDefault();
+    }
+});
+</script>
+
+{% endblock %}
