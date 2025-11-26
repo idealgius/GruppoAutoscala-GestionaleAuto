@@ -11,9 +11,17 @@ import json
 # CONFIG
 # =====================================
 import os
+import pytz   # ← AGGIUNTO
 from flask import Flask
 
 app = Flask(__name__)
+
+# =====================================
+# ORA ITALIANA – FUNZIONE DEFINITIVA
+# =====================================
+def now_ita():
+    """Restituisce sempre l'orario dell'Italia (Europe/Rome)."""
+    return datetime.now(pytz.timezone("Europe/Rome"))
 
 # Imposta SECRET_KEY: usa la variabile d'ambiente se disponibile, altrimenti usa una chiave di default per locale
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'questa_e_una_chiave_di_default')
@@ -185,11 +193,20 @@ def log_storico(user_id, azione: str, tabella: str | None = None, record_id: int
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO storico_azioni (id_utente, azione, tabella, record_id, data_ora) VALUES (%s, %s, %s, %s, %s)",
-            (user_id, azione, tabella, record_id, datetime.utcnow())
-        )
+
+        cur.execute("""
+            INSERT INTO storico_azioni (id_utente, azione, tabella_nome, record_id, data_ora)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            user_id,
+            azione,
+            tabella,      # <- ora il nome è corretto
+            record_id,
+            now_ita()      # <- ora italiana definitiva
+        ))
+
         conn.commit()
+
     except Exception:
         app.logger.exception("Impossibile registrare lo storico.")
     finally:
@@ -205,7 +222,7 @@ def registra_azione_username(username, azione, dettagli):
         cur.execute("""
             INSERT INTO storico_azioni (utente, azione, dettagli, data_ora)
             VALUES (%s, %s, %s, %s)
-        """, (username, azione, dettagli, datetime.utcnow()))
+        """, (username, azione, dettagli, now_ita()))
         conn.commit()
     except Exception:
         app.logger.exception("Impossibile registrare azione con username.")
@@ -1960,7 +1977,7 @@ def aggiungi_promemoria():
         cur.execute("""
             INSERT INTO promemoria (utente_id, titolo, info, data_creazione)
             VALUES (%s, %s, %s, %s)
-        """, (session['user_id'], titolo, descrizione, datetime.utcnow()))
+        """, (session['user_id'], titolo, descrizione, now_ita()))
         conn.commit()
 
         # Log azione
@@ -2102,23 +2119,34 @@ def salva_ordine_magazzino():
     codice = request.form.get("codice")
     targa = request.form.get("targa")
     cliente = request.form.get("cliente")
+    fornitore = request.form.get("fornitore")   # ⭐ NUOVO CAMPO
     stato = request.form.get("stato")
 
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # ⭐ Inserisce anche il campo fornitore e la data italiana
     cur.execute("""
-        INSERT INTO ordini_magazzino (prodotto, codice, targa, cliente, stato)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (prodotto, codice, targa, cliente, stato))
+        INSERT INTO ordini_magazzino (prodotto, codice, targa, cliente, fornitore, stato, data_creazione)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+    """, (prodotto, codice, targa, cliente, fornitore, stato, now_ita()))
+
+    nuovo_id = cur.fetchone()[0]
 
     conn.commit()
     conn.close()
 
+    # 🔥 STORICO — INSERIMENTO
+    log_storico(
+        user_id=session.get("user_id"),
+        azione="Inserimento nuovo ordine magazzino",
+        tabella="ordini_magazzino",
+        record_id=nuovo_id
+    )
+
     flash("Ordine inserito correttamente!", "success")
     return redirect(url_for("giacenza_magazzino"))
-
-
 
 # ========== 4) CAMBIO STATO DIRETTO (DA GIACENZA) ==========
 @app.route("/ordini/cambia_stato/<int:id>/<string:nuovo_stato>")
@@ -2149,6 +2177,14 @@ def cambia_stato_ordine(id, nuovo_stato):
     conn.commit()
     conn.close()
 
+    # 🔥 STORICO — CAMBIO STATO
+    log_storico(
+        user_id=session.get("user_id"),
+        azione=f"Cambio stato ordine → {nuovo_stato}",
+        tabella="ordini_magazzino",
+        record_id=id
+    )
+
     flash("Stato aggiornato!", "success")
     return redirect(url_for("giacenza_magazzino"))
 
@@ -2166,6 +2202,14 @@ def elimina_ordine(id):
 
     conn.commit()
     conn.close()
+
+    # 🔥 STORICO — ELIMINAZIONE
+    log_storico(
+        user_id=session.get("user_id"),
+        azione="Eliminazione ordine magazzino",
+        tabella="ordini_magazzino",
+        record_id=id
+    )
 
     flash("Ordine eliminato!", "success")
     return redirect(url_for("giacenza_magazzino"))

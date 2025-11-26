@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-    /* CONTENITORE METAL */
     .metal-box {
         background: linear-gradient(180deg, #f0f0f0, #c0c0c0, #e0e0e0);
         border: 3px solid #000;
@@ -17,7 +16,7 @@
         color: #111;
         text-transform: uppercase;
         font-weight: bold;
-        border-bottom: 3px solid #7a0000; /* rosso metal */
+        border-bottom: 3px solid #7a0000;
         padding-bottom: 6px;
         margin-bottom: 25px;
     }
@@ -78,6 +77,10 @@
         <!-- CLIENTE -->
         <label for="cliente">Cliente (Nome + Cognome) *</label>
         <input type="text" id="cliente" name="cliente" required>
+
+        <!-- FORNITORE (NUOVO CAMPO FACOLTATIVO) -->
+        <label for="fornitore">Fornitore (facoltativo)</label>
+        <input type="text" id="fornitore" name="fornitore">
 
         <!-- STATO -->
         <label for="stato">Stato Ordine *</label>
