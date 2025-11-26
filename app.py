@@ -2067,6 +2067,110 @@ def storico():
     return render_template('storico.html', storico=storico_rows)
 
 # =====================================
+# ORDINI MAGAZZINO - ROUTE ESSENZIALI
+# =====================================
+
+# ========== 1) GIACENZA MAGAZZINO ==========
+@app.route("/ordini/giacenza")
+@login_required
+def giacenza_magazzino():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("SELECT * FROM ordini_magazzino ORDER BY id DESC")
+    ordini = cur.fetchall()
+
+    conn.close()
+    return render_template("giacenza_magazzino.html", ordini=ordini)
+
+
+
+# ========== 2) INSERISCI ORDINE MAGAZZINO ==========
+@app.route("/ordini/inserisci")
+@login_required
+def inserisci_magazzino():
+    return render_template("inserisci_magazzino.html")
+
+
+
+# ========== 3) SALVA NUOVO ORDINE ==========
+@app.route("/ordini/salva", methods=["POST"])
+@login_required
+def salva_ordine_magazzino():
+
+    prodotto = request.form.get("prodotto")
+    codice = request.form.get("codice")
+    targa = request.form.get("targa")
+    cliente = request.form.get("cliente")
+    stato = request.form.get("stato")
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO ordini_magazzino (prodotto, codice, targa, cliente, stato)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (prodotto, codice, targa, cliente, stato))
+
+    conn.commit()
+    conn.close()
+
+    flash("Ordine inserito correttamente!", "success")
+    return redirect(url_for("giacenza_magazzino"))
+
+
+
+# ========== 4) CAMBIO STATO DIRETTO (DA GIACENZA) ==========
+@app.route("/ordini/cambia_stato/<int:id>/<string:nuovo_stato>")
+@login_required
+def cambia_stato_ordine(id, nuovo_stato):
+
+    # REGOLE STATO
+    stati_permesi = [
+        "Ordine Inviato",
+        "Ordine Arrivato",
+        "Appuntamento Fissato",
+        "In Stock"
+    ]
+
+    if nuovo_stato not in stati_permesi:
+        flash("Stato non valido.", "error")
+        return redirect(url_for("giacenza_magazzino"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        UPDATE ordini_magazzino
+        SET stato = %s
+        WHERE id = %s
+    """, (nuovo_stato, id))
+
+    conn.commit()
+    conn.close()
+
+    flash("Stato aggiornato!", "success")
+    return redirect(url_for("giacenza_magazzino"))
+
+
+
+# ========== 5) ELIMINA ORDINE ==========
+@app.route("/ordini/elimina/<int:id>")
+@login_required
+def elimina_ordine(id):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("DELETE FROM ordini_magazzino WHERE id = %s", (id,))
+
+    conn.commit()
+    conn.close()
+
+    flash("Ordine eliminato!", "success")
+    return redirect(url_for("giacenza_magazzino"))
+
+# =====================================
 # AVVIO SERVER
 # =====================================
 if __name__ == '__main__':
