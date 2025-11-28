@@ -31,6 +31,7 @@
                 {% endfor %}
             </select>
         </div>
+
     </div>
 
     <div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
@@ -74,7 +75,7 @@
                                 {% if solo_lettura %}disabled{% endif %}>+</button>
                     </div>
 
-                    <!-- NOTE PROFESSIONALI -->
+                    <!-- NOTE -->
                     <div style="margin-top:12px;">
                         <label><strong>Note:</strong></label><br>
                         <div class="nota-gomma-box" style="background:#fff; border:1px solid #ccc; padding:8px; border-radius:6px; min-height:50px; position:relative;">
@@ -101,21 +102,26 @@
                     {% endif %}
                 </div>
             </div>
+
         </div>
         {% endfor %}
     </div>
+
 {% else %}
     <p style="text-align:center; color:#666;">Nessuna gomma inserita.</p>
 {% endif %}
 
+
+
+<!-- ========================= -->
+<!--     STILI CUSTOM SELECT   -->
+<!-- ========================= -->
 <style>
-/* Wrapper per bloccare il select */
 .select-wrapper {
     position: relative;
     display: inline-block;
 }
 
-/* Disattiva completamente il menu nativo */
 .select-wrapper select {
     appearance: none;
     -webkit-appearance: none;
@@ -124,7 +130,6 @@
     cursor: pointer;
 }
 
-/* Pannello personalizzato */
 .custom-select-panel {
     position: absolute;
     left: 0;
@@ -134,7 +139,7 @@
     border: 2px solid #004080;
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    max-height: 220px;
+    max-height: 250px;
     overflow-y: auto;
     z-index: 9999;
     font-size: 14px;
@@ -147,6 +152,7 @@
     border-bottom: 1px solid #ccc;
     outline: none;
     font-size: 14px;
+    box-sizing: border-box;
 }
 
 .custom-select-panel .opt-row {
@@ -160,54 +166,63 @@
     background: #e7f1ff;
 }
 
-/* Smartphone */
 @media (max-width: 600px) {
     .select-wrapper {
         width: 100%;
     }
-
     .select-wrapper select {
         width: 100%;
     }
 }
 </style>
 
+
+
+<!-- ========================= -->
+<!--     SCRIPT COMPLETO      -->
+<!-- ========================= -->
 <script>
-// ==========================
-// 🔥 FILTRO LISTA GOMME
-// ==========================
+
+// 🔥 Normalizza le misure → es. "185/55 R15" diventa "1855515"
+function normalizzaMisura(str) {
+    if (!str) return "";
+    return str.replace(/[^0-9]/g, "");  // tiene solo numeri
+}
+
+// 🔥 Filtra la lista gomme
 function filtraGomme(){
     const marca = document.getElementById("filtro-marca").value;
     const misura = document.getElementById("filtro-misura").value;
 
+    const misuraNorm = normalizzaMisura(misura);
+
     document.querySelectorAll('.gomma-item').forEach(div=>{
         const matchMarca = !marca || div.dataset.marca === marca;
-        const matchMisura = !misura || div.dataset.misura === misura;
+
+        const misuraItemNorm = normalizzaMisura(div.dataset.misura);
+        const matchMisura = !misuraNorm || misuraItemNorm.startsWith(misuraNorm);
 
         div.style.display = (matchMarca && matchMisura) ? 'block' : 'none';
     });
 }
 
-// ==========================
-// 🔥 SELECT SEARCHBAR CUSTOM
-// ==========================
-function makeSearchableSelect(selectId) {
-    const select = document.getElementById(selectId);
-    if (!select) return;
 
+
+// =============================
+// 🔥 SELECT CON SEARCHBAR PRO
+// =============================
+function makeSearchableSelect(selectId) {
+
+    const select = document.getElementById(selectId);
     const wrapper = select.parentElement;
+
     let panel = null;
 
-    // Disattiva menu nativo in ogni caso
-    select.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-    });
+    // Disattiva completamente menu nativo
+    select.addEventListener("mousedown", e => e.preventDefault());
 
     function closePanel() {
-        if (panel) {
-            panel.remove();
-            panel = null;
-        }
+        if (panel) { panel.remove(); panel = null; }
     }
 
     function openPanel() {
@@ -220,18 +235,23 @@ function makeSearchableSelect(selectId) {
         input.type = "text";
         input.placeholder = "Cerca...";
         input.className = "search-input";
+
         panel.appendChild(input);
 
         const options = Array.from(select.options).map(opt => ({
             text: opt.textContent,
-            value: opt.value
+            value: opt.value,
+            norm: normalizzaMisura(opt.value)
         }));
 
         function render(term="") {
             panel.querySelectorAll(".opt-row").forEach(e => e.remove());
 
+            const termNorm = normalizzaMisura(term);
+
             options
-                .filter(o => o.text.toLowerCase().includes(term.toLowerCase()))
+                .filter(o => !termNorm || o.norm.startsWith(termNorm))
+                .sort((a,b)=> a.norm.localeCompare(b.norm))
                 .forEach(o => {
                     const row = document.createElement("div");
                     row.className = "opt-row";
@@ -247,28 +267,26 @@ function makeSearchableSelect(selectId) {
                 });
         }
 
-        render();
+        render("");
 
-        input.addEventListener("input", () => render(input.value));
+        input.addEventListener("input", () => {
+            render(input.value);
+        });
 
         wrapper.appendChild(panel);
         input.focus();
 
-        // Chiudi clic esterno
-        const closeHandler = (ev) => {
-            if (!wrapper.contains(ev.target)) {
-                closePanel();
-                document.removeEventListener("click", closeHandler);
-            }
-        };
-
-        setTimeout(() => {
-            document.addEventListener("click", closeHandler);
+        setTimeout(()=>{
+            document.addEventListener("click", function handler(e){
+                if (!wrapper.contains(e.target)) {
+                    closePanel();
+                    document.removeEventListener("click", handler);
+                }
+            });
         }, 20);
     }
 
-    select.addEventListener("click", (e) => {
-        e.preventDefault();
+    select.addEventListener("click", e => {
         e.stopPropagation();
         panel ? closePanel() : openPanel();
     });
@@ -277,11 +295,14 @@ function makeSearchableSelect(selectId) {
 makeSearchableSelect("filtro-marca");
 makeSearchableSelect("filtro-misura");
 
-// ==========================
-// 🔥 FUNZIONI GOMME (note, prezzi, quantità, ecc.)
-// ==========================
+
+
+// =============================
+// 🔥 FUNZIONI GOMME (quantità, note...)
+// =============================
 {% if not solo_lettura %}
 document.querySelectorAll('.gomma-item').forEach(div => {
+
     const id = div.dataset.id;
     const qta = div.querySelector('.quantita');
     const prezzoUnit = div.querySelector('.prezzo-unitario');
@@ -347,6 +368,7 @@ document.querySelectorAll('.gomma-item').forEach(div => {
             alert("❌ Errore di comunicazione con il server.");
         }
     });
+
 });
 {% endif %}
 </script>
