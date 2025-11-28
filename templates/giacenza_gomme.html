@@ -10,20 +10,27 @@
 {% if gomme %}
     <!-- FILTRI -->
     <div style="max-width:900px; margin:0 auto 20px auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
-        <select id="filtro-marca">
-            <option value="">Tutte le marche</option>
-            {% for m in gomme|map(attribute='marca')|unique|sort %}
-                <option value="{{ m }}">{{ m }}</option>
-            {% endfor %}
-        </select>
 
-        <select id="filtro-misura">
-            <option value="">Tutte le misure</option>
-            {% for g in gomme %}
-                {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
-                <option value="{{ misura }}">{{ misura }}</option>
-            {% endfor %}
-        </select>
+        <!-- WRAPPER PER MARCA -->
+        <div class="select-wrapper">
+            <select id="filtro-marca">
+                <option value="">Tutte le marche</option>
+                {% for m in gomme|map(attribute='marca')|unique|sort %}
+                    <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- WRAPPER PER MISURA -->
+        <div class="select-wrapper">
+            <select id="filtro-misura">
+                <option value="">Tutte le misure</option>
+                {% for g in gomme %}
+                    {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
+                    <option value="{{ misura }}">{{ misura }}</option>
+                {% endfor %}
+            </select>
+        </div>
     </div>
 
     <div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
@@ -101,26 +108,178 @@
     <p style="text-align:center; color:#666;">Nessuna gomma inserita.</p>
 {% endif %}
 
-<script>
-// --- FILTRI ---
-const filtroMarca = document.getElementById('filtro-marca');
-const filtroMisura = document.getElementById('filtro-misura');
+<style>
+/* Wrapper per bloccare il select */
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+}
 
+/* Disattiva completamente il menu nativo */
+.select-wrapper select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: white;
+    cursor: pointer;
+}
+
+/* Pannello personalizzato */
+.custom-select-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 2px);
+    background: #ffffff;
+    border: 2px solid #004080;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 9999;
+    font-size: 14px;
+}
+
+.custom-select-panel .search-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    outline: none;
+    font-size: 14px;
+}
+
+.custom-select-panel .opt-row {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+}
+
+.custom-select-panel .opt-row:hover {
+    background: #e7f1ff;
+}
+
+/* Smartphone */
+@media (max-width: 600px) {
+    .select-wrapper {
+        width: 100%;
+    }
+
+    .select-wrapper select {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+// ==========================
+// 🔥 FILTRO LISTA GOMME
+// ==========================
 function filtraGomme(){
-    const marca = filtroMarca.value;
-    const misura = filtroMisura.value;
+    const marca = document.getElementById("filtro-marca").value;
+    const misura = document.getElementById("filtro-misura").value;
 
     document.querySelectorAll('.gomma-item').forEach(div=>{
         const matchMarca = !marca || div.dataset.marca === marca;
         const matchMisura = !misura || div.dataset.misura === misura;
+
         div.style.display = (matchMarca && matchMisura) ? 'block' : 'none';
     });
 }
 
-if(filtroMarca) filtroMarca.addEventListener('change', filtraGomme);
-if(filtroMisura) filtroMisura.addEventListener('change', filtraGomme);
+// ==========================
+// 🔥 SELECT SEARCHBAR CUSTOM
+// ==========================
+function makeSearchableSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
 
-// --- FUNZIONALITÀ SOLO SE NON SOLO_LETTURA ---
+    const wrapper = select.parentElement;
+    let panel = null;
+
+    // Disattiva menu nativo in ogni caso
+    select.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+
+    function closePanel() {
+        if (panel) {
+            panel.remove();
+            panel = null;
+        }
+    }
+
+    function openPanel() {
+        closePanel();
+
+        panel = document.createElement("div");
+        panel.className = "custom-select-panel";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Cerca...";
+        input.className = "search-input";
+        panel.appendChild(input);
+
+        const options = Array.from(select.options).map(opt => ({
+            text: opt.textContent,
+            value: opt.value
+        }));
+
+        function render(term="") {
+            panel.querySelectorAll(".opt-row").forEach(e => e.remove());
+
+            options
+                .filter(o => o.text.toLowerCase().includes(term.toLowerCase()))
+                .forEach(o => {
+                    const row = document.createElement("div");
+                    row.className = "opt-row";
+                    row.textContent = o.text;
+
+                    row.addEventListener("click", () => {
+                        select.value = o.value;
+                        closePanel();
+                        filtraGomme();
+                    });
+
+                    panel.appendChild(row);
+                });
+        }
+
+        render();
+
+        input.addEventListener("input", () => render(input.value));
+
+        wrapper.appendChild(panel);
+        input.focus();
+
+        // Chiudi clic esterno
+        const closeHandler = (ev) => {
+            if (!wrapper.contains(ev.target)) {
+                closePanel();
+                document.removeEventListener("click", closeHandler);
+            }
+        };
+
+        setTimeout(() => {
+            document.addEventListener("click", closeHandler);
+        }, 20);
+    }
+
+    select.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        panel ? closePanel() : openPanel();
+    });
+}
+
+makeSearchableSelect("filtro-marca");
+makeSearchableSelect("filtro-misura");
+
+// ==========================
+// 🔥 FUNZIONI GOMME (note, prezzi, quantità, ecc.)
+// ==========================
 {% if not solo_lettura %}
 document.querySelectorAll('.gomma-item').forEach(div => {
     const id = div.dataset.id;
@@ -128,7 +287,6 @@ document.querySelectorAll('.gomma-item').forEach(div => {
     const prezzoUnit = div.querySelector('.prezzo-unitario');
     const prezzoTreno = div.querySelector('.prezzo-treno');
 
-    // NOTE PROFESSIONALI
     const notaBox = div.querySelector('.nota-gomma-box');
     const notaText = notaBox.querySelector('.nota-gomma-text');
     const notaTextarea = notaBox.querySelector('.nota-gomma');
@@ -142,19 +300,16 @@ document.querySelectorAll('.gomma-item').forEach(div => {
         });
     }
 
-    // Incrementa
     div.querySelector('.inc-disponibilita').addEventListener('click', () => {
         qta.textContent = parseInt(qta.textContent) + 1;
     });
 
-    // Decrementa
     div.querySelector('.dec-disponibilita').addEventListener('click', () => {
         if(parseInt(qta.textContent) > 0){
             qta.textContent = parseInt(qta.textContent) - 1;
         }
     });
 
-    // Salvataggio
     div.querySelector('.save-gomma').addEventListener('click', async () => {
         const formData = new FormData();
         formData.append("prezzo_unitario", prezzoUnit.value.trim());
@@ -177,7 +332,6 @@ document.querySelectorAll('.gomma-item').forEach(div => {
         }
     });
 
-    // Eliminazione
     div.querySelector('.delete-gomma').addEventListener('click', async () => {
         if(!confirm('Eliminare questa gomma?')) return;
 
