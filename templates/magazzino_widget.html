@@ -1,0 +1,121 @@
+<!-- WIDGET GIACENZA MAGAZZINO (DESTRA – BLUE METAL STYLE) -->
+<style>
+  /* --- QUADRATO PRINCIPALE --- */
+  #quadrato-magazzino {
+      position: fixed;
+      top: 180px; /* posizionato sotto i ricambi ordinati */
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(145deg, #003366, #0052A3, #003366); /* BLU METAL */
+      border: 3px solid #b4b4b4; /* bordo argento metal */
+      color: white;
+      font-size: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 5px 14px rgba(0,0,0,0.4);
+      z-index: 2180;
+      transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  #quadrato-magazzino:hover {
+      transform: scale(1.1);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+  }
+
+  /* --- POPUP --- */
+  #popup-magazzino {
+      display: none;
+      position: fixed;
+      top: 260px;
+      right: 20px;
+      width: 260px;
+      background: linear-gradient(180deg, #f5f5f5, #e6e6e6, #cfcfcf); /* ARGENTO METAL */
+      border: 2px solid #003366; /* blu scuro metal */
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+      z-index: 2179;
+      font-family: "Segoe UI", sans-serif;
+      animation: fadeIn 0.25s ease-out;
+  }
+
+  #popup-magazzino h5 {
+      margin: 0 0 10px 0;
+      color: #003366;
+      font-size: 17px;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      border-bottom: 2px solid #0052A3;
+      padding-bottom: 6px;
+  }
+
+  /* --- BOTTONI POPUP --- */
+  .btn-opzione-mag {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 15px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: transform 0.2s, background 0.2s;
+  }
+
+  .btn-giacenza-mag {
+      background: linear-gradient(90deg, #003366, #0052A3, #003366); /* blu metal */
+      color: white;
+  }
+
+  .btn-giacenza-mag:hover {
+      transform: scale(1.05);
+  }
+
+  .btn-inserisci-mag {
+      background: linear-gradient(90deg, #b4b4b4, #e6e6e6, #b4b4b4); /* argento metal */
+      color: #000;
+  }
+
+  .btn-inserisci-mag:hover {
+      transform: scale(1.05);
+  }
+
+  @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<!-- POPUP -->
+<div id="popup-magazzino">
+    <h5>Giacenza Magazzino</h5>
+
+    <button class="btn-opzione-mag btn-giacenza-mag"
+            onclick="window.location.href='{{ url_for('giacenza_magazzino') }}'">
+        📦 Giacenza Magazzino
+    </button>
+
+    <button class="btn-opzione-mag btn-inserisci-mag"
+            onclick="window.location.href='{{ url_for('inserisci_magazzino') }}'">
+        ✏️ Inserisci Ricambio
+    </button>
+</div>
+
+<!-- QUADRATO DI APERTURA -->
+<div id="quadrato-magazzino">📦</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const quad = document.getElementById("quadrato-magazzino");
+    const pop = document.getElementById("popup-magazzino");
+
+    quad.addEventListener("click", () => {
+        pop.style.display = (pop.style.display === "block") ? "none" : "block";
+    });
+});
+</script>
