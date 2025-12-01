@@ -5,30 +5,29 @@
 {% block content %}
 <style>
     .metal-box {
-        background: linear-gradient(180deg, #f5f5f5, #c0c0c0, #e0e0e0);
-        border: 3px solid #000;
+        background: linear-gradient(180deg, #f5faff, #d9e4f0, #eef6ff);
+        border: 3px solid #003366;
         border-radius: 12px;
         padding: 25px;
         box-shadow: 0 6px 18px rgba(0,0,0,0.35);
     }
 
     h1 {
-        color: #111;
+        color: #003366;
         text-transform: uppercase;
         font-weight: bold;
-        border-bottom: 3px solid #7a0000;
+        border-bottom: 3px solid #0052A3;
         padding-bottom: 6px;
         margin-bottom: 25px;
     }
 
-    /* FILTRI */
     .filter-box {
         display: flex;
         gap: 15px;
         margin-bottom: 20px;
         padding: 15px;
-        background: linear-gradient(90deg, #7a0000, #c00000);
-        border: 2px solid black;
+        background: linear-gradient(90deg, #003366, #0052A3);
+        border: 2px solid #b4b4b4;
         border-radius: 10px;
         box-shadow: 0 4px 10px rgba(0,0,0,0.4);
         flex-wrap: wrap;
@@ -40,21 +39,14 @@
         position: relative;
     }
 
-    .filter-item input {
+    .filter-item input,
+    .filter-item select {
         width: 100%;
         padding: 8px;
-        border: 2px solid #000;
+        border: 2px solid #003366;
         border-radius: 6px;
         margin-bottom: 3px;
-        background: #f5f5f5;
-    }
-
-    .filter-select {
-        width: 100%;
-        padding: 8px;
-        border-radius: 6px;
-        border: 2px solid #000;
-        background: linear-gradient(180deg, #cfcfcf, #e6e6e6);
+        background: #eef6ff;
         font-weight: bold;
     }
 
@@ -66,10 +58,10 @@
     }
 
     #resetFiltri {
-        background:black;
-        color:white;
+        background:white;
+        color:#003366;
         padding:10px 15px;
-        border:2px solid #fff;
+        border:2px solid #003366;
         border-radius:8px;
         font-weight:bold;
         cursor:pointer;
@@ -83,238 +75,146 @@
     }
 
     th {
-        background: linear-gradient(90deg, #7a0000, #e00000, #7a0000);
+        background: linear-gradient(90deg, #003366, #0052A3, #003366);
         color: white;
         padding: 12px;
         text-align: center;
         font-size: 15px;
-        border: 2px solid black;
+        border: 2px solid #003366;
     }
 
     td {
-        background: linear-gradient(90deg, #e6e6e6, #f7f7f7, #e6e6e6);
+        background: linear-gradient(90deg, #eef6ff, #ffffff, #eef6ff);
         padding: 10px;
-        border: 1px solid #999;
+        border: 1px solid #99aabb;
         text-align: center;
     }
 
-    tr:nth-child(even) td {
-        background: linear-gradient(90deg, #cdcdcd, #e5e5e5, #cdcdcd);
-    }
-
-    .bollino {
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        display: inline-block;
-        border: 2px solid #000;
-    }
-
-    .inviato { background-color: #1e90ff; }
-    .arrivato { background-color: #ffd700; }
-    .appuntamento { background-color: #32cd32; }
-    .stock {
-        background: linear-gradient(90deg, #a8a8a8, #e0e0e0);
-    }
-
-    .btn-stato {
-        display: block;
-        margin: 4px 0;
-        padding: 6px;
-        border-radius: 8px;
-        border: 2px solid #000;
-        font-weight: bold;
-        cursor: pointer;
-        text-decoration: none;
-        transition: 0.2s;
-    }
-
-    .btn-arrivato { background-color: #ffd700; }
-    .btn-app { background-color: #32cd32; color: white; }
-    .btn-stock { background: linear-gradient(90deg, #a8a8a8, #e0e0e0); }
-
     .btn-elimina {
-        margin-top: 8px;
-        background: #222;
+        background: #003366;
         color: white;
-        border: 2px solid #000;
-        padding: 6px;
+        border: 2px solid #002244;
+        padding: 6px 10px;
         border-radius: 8px;
         text-decoration: none;
-        display: inline-block;
+        font-weight: bold;
+        cursor:pointer;
+    }
+
+    .btn-modifica {
+        background:#0077cc;
+        color:white;
+        border:none;
+        padding:6px 10px;
+        border-radius:8px;
+        cursor:pointer;
+        font-weight:bold;
+    }
+
+    .btn-foto {
+        background:#0052A3;
+        color:white;
+        border:none;
+        padding:6px 10px;
+        border-radius:6px;
+        cursor:pointer;
+        font-size:16px;
+        font-weight:bold;
     }
 </style>
 
 <div class="metal-box">
-    <h1>🏎️ Giacenza Magazzino</h1>
+    <h1>📦 Giacenza Magazzino</h1>
 
-    {% if ordini|length == 0 %}
-        <p>Nessun ordine presente in magazzino.</p>
+    {% if ricambi|length == 0 %}
+        <p>Nessun ricambio presente in magazzino.</p>
     {% else %}
 
-    <!-- 🔥 FILTRI -->
+    <!-- FILTRI -->
     <div class="filter-box">
 
-        <!-- PRODOTTO -->
         <div class="filter-item">
-            <label class="filter-label">Prodotto</label>
-            <input type="text" id="filterProdotto">
-            <select class="filter-select" id="selectProdotto">
-                <option value="">Tutti</option>
-                {% for prodotto in ordini|map(attribute='prodotto')|unique %}
-                    <option value="{{ prodotto }}">{{ prodotto }}</option>
-                {% endfor %}
-            </select>
+            <label class="filter-label">Descrizione</label>
+            <input type="text" id="filterDescrizione">
         </div>
 
-        <!-- CODICE -->
         <div class="filter-item">
             <label class="filter-label">Codice</label>
             <input type="text" id="filterCodice">
-            <select class="filter-select" id="selectCodice">
-                <option value="">Tutti</option>
-                {% for codice in ordini|map(attribute='codice')|unique %}
-                    {% if codice %}
-                        <option value="{{ codice }}">{{ codice }}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
         </div>
 
-        <!-- TARGA -->
         <div class="filter-item">
-            <label class="filter-label">Targa</label>
-            <input type="text" id="filterTarga">
-            <select class="filter-select" id="selectTarga">
+            <label class="filter-label">Marca Veicolo</label>
+            <select id="filterMarcaVeicolo">
                 <option value="">Tutte</option>
-                {% for targa in ordini|map(attribute='targa')|unique %}
-                    <option value="{{ targa }}">{{ targa }}</option>
+                {% for m in [
+                    "ALFA ROMEO","AUDI","BMW","BYD","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA","DAEWOO",
+                    "DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X","INFINITI","ISUZU",
+                    "IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER","LEXUS","LYNK&CO","MAN","MASERATI",
+                    "MAXUS","MAZDA","MERCEDES","MG","MINI","MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO",
+                    "POLESTAR","PORSCHE","RENAULT","ROVER","SAAB","SEAT","SKODA","SMART","SPORTEQUIPE",
+                    "SSANGYONG","SUBARU","SUZUKI","TATA","TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
+                ] %}
+                    <option value="{{ m }}">{{ m }}</option>
                 {% endfor %}
             </select>
         </div>
 
-        <!-- CLIENTE -->
         <div class="filter-item">
-            <label class="filter-label">Cliente</label>
-            <input type="text" id="filterCliente">
-            <select class="filter-select" id="selectCliente">
-                <option value="">Tutti</option>
-                {% for cliente in ordini|map(attribute='cliente')|unique %}
-                    <option value="{{ cliente }}">{{ cliente }}</option>
-                {% endfor %}
-            </select>
+            <label class="filter-label">Tipo Veicolo</label>
+            <input type="text" id="filterTipo">
         </div>
 
-        <!-- 👉 NUOVO: FORNITORE -->
-        <div class="filter-item">
-            <label class="filter-label">Fornitore</label>
-            <input type="text" id="filterFornitore">
-            <select class="filter-select" id="selectFornitore">
-                <option value="">Tutti</option>
-                {% for f in ordini|map(attribute='fornitore')|unique %}
-                    {% if f %}
-                        <option value="{{ f }}">{{ f }}</option>
-                    {% endif %}
-                {% endfor %}
-            </select>
-        </div>
-
-        <!-- RESET -->
-        <div>
-            <button id="resetFiltri">Reset Filtri</button>
-        </div>
-
+        <div><button id="resetFiltri">Reset</button></div>
     </div>
 
-    <!-- 🔥 TABELLA -->
-    <table id="tabellaOrdini">
+    <!-- TABELLA -->
+    <table id="tabellaMagazzino">
         <thead>
             <tr>
-                <th>Prodotto</th>
+                <th>Descrizione</th>
                 <th>Codice</th>
-                <th>Targa</th>
-                <th>Cliente</th>
-                <th>Inserito il</th>
-                <th>Fornitore</th>
-                <th>Stato</th>
-                <th>Bollino</th>
-                <th>Cambia Stato</th>
+                <th>Marca</th>
+                <th>Tipo</th>
+                <th>Note</th>
+                <th>Foto</th>
+                <th>Modifica</th>
                 <th>Elimina</th>
             </tr>
         </thead>
 
         <tbody>
-            {% for ordine in ordini %}
+            {% for r in ricambi %}
             <tr>
-                <td class="col-prodotto">{{ ordine.prodotto }}</td>
-                <td class="col-codice">{{ ordine.codice or "-" }}</td>
-                <td class="col-targa">{{ ordine.targa }}</td>
-                <td class="col-cliente">{{ ordine.cliente }}</td>
+                <td class="col-descrizione">{{ r.descrizione }}</td>
+                <td class="col-codice">{{ r.codice or "-" }}</td>
+                <td class="col-marca">{{ r.marca_veicolo or "-" }}</td>
+                <td class="col-tipo">{{ r.tipo_veicolo or "-" }}</td>
+                <td class="col-note">{{ r.note or "-" }}</td>
 
                 <td>
-                    {% if ordine.data_creazione %}
-                        {{ ordine.data_creazione.strftime('%d/%m/%Y %H:%M') }}
+                    {% if r.foto %}
+                        <button class="btn-foto"
+                            onclick="mostraFoto('{{ r.foto }}')">📸</button>
                     {% else %}
                         -
                     {% endif %}
                 </td>
 
-                <td class="col-fornitore">{{ ordine.fornitore or "-" }}</td>
-
-                <td>{{ ordine.stato }}</td>
-
                 <td>
-                    {% if ordine.stato == "Ordine Inviato" %}
-                        <span class="bollino inviato"></span>
-                    {% elif ordine.stato == "Ordine Arrivato" %}
-                        <span class="bollino arrivato"></span>
-                    {% elif ordine.stato == "Appuntamento Fissato" %}
-                        <span class="bollino appuntamento"></span>
-                    {% else %}
-                        <span class="bollino stock"></span>
-                    {% endif %}
-                </td>
-
-                <td style="width:160px;">
-                    {% if ordine.stato == "Ordine Inviato" %}
-                        <a class="btn-stato btn-arrivato"
-                           href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Ordine Arrivato') }}">
-                           Arrivato
-                        </a>
-                        <a class="btn-stato btn-app"
-                           href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Appuntamento Fissato') }}">
-                           Appuntamento
-                        </a>
-                        <a class="btn-stato btn-stock"
-                           href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='In Stock') }}">
-                           In Stock
-                        </a>
-                    {% endif %}
-
-                    {% if ordine.stato == "Ordine Arrivato" %}
-                        <a class="btn-stato btn-app"
-                           href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='Appuntamento Fissato') }}">
-                           Appuntamento
-                        </a>
-                        <a class="btn-stato btn-stock"
-                           href="{{ url_for('cambia_stato_ordine', id=ordine.id, nuovo_stato='In Stock') }}">
-                           In Stock
-                        </a>
-                    {% endif %}
-
-                    {% if ordine.stato in ["Appuntamento Fissato", "In Stock"] %}
-                        <span style="font-size:13px; font-weight:bold; color:#444;">Stato Definitivo</span>
-                    {% endif %}
+                    <button class="btn-modifica"
+                        onclick="apriModifica({{ r.id }}, '{{ r.descrizione|escape }}', '{{ r.codice|escape }}', '{{ r.marca_veicolo|escape }}', '{{ r.tipo_veicolo|escape }}', '{{ r.note|escape }}', '{{ r.foto }}')">
+                        ✏️
+                    </button>
                 </td>
 
                 <td>
                     <a class="btn-elimina"
                        onclick="return confirm('Eliminare definitivamente?')"
-                       href="{{ url_for('elimina_ordine', id=ordine.id) }}">
+                       href="{{ url_for('elimina_magazzino', id=r.id) }}">
                        X
                     </a>
                 </td>
-
             </tr>
             {% endfor %}
         </tbody>
@@ -323,54 +223,99 @@
     {% endif %}
 </div>
 
-<!-- 🔥 JS FILTRI -->
+<!-- POPUP FOTO -->
+<div id="popupFoto" style="display:none;
+    position: fixed; top:50%; left:50%;
+    transform: translate(-50%,-50%);
+    background:white; padding:15px;
+    border:3px solid #003366; border-radius:12px;
+    z-index:5000;">
+    <img id="fotoGrande" src="" style="max-width:90vw; max-height:80vh;">
+    <button onclick="document.getElementById('popupFoto').style.display='none'"
+            style="margin-top:10px; padding:6px 12px; background:#003366; color:white; border:none; border-radius:8px;">
+        Chiudi
+    </button>
+</div>
+
+<!-- POPUP MODIFICA -->
+<div id="popupModifica" style="display:none;
+    position:fixed; top:50%; left:50%;
+    transform:translate(-50%, -50%);
+    width:420px; background:white; padding:20px;
+    border-radius:12px; border:3px solid #003366;
+    z-index:6000; box-shadow:0 6px 18px rgba(0,0,0,0.4);">
+
+    <h3 style="color:#003366; text-align:center; margin-top:0;">Modifica Ricambio</h3>
+
+    <form id="formModifica" method="POST" enctype="multipart/form-data">
+
+        <input type="hidden" name="id" id="mod-id">
+
+        <label><b>Descrizione</b></label>
+        <input type="text" name="descrizione" id="mod-descrizione">
+
+        <label><b>Codice</b></label>
+        <input type="text" name="codice" id="mod-codice">
+
+        <label><b>Marca Veicolo</b></label>
+        <select name="marca_veicolo" id="mod-marca">
+            <option value="">-</option>
+            {% for m in [
+                "ALFA ROMEO","AUDI","BMW","BYD","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA","DAEWOO",
+                "DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X","INFINITI","ISUZU",
+                "IVECO","JAGUAR","JEEP","KIA","LADA","LANCIA","LAND ROVER","LEXUS","LYNK&CO","MAN","MASERATI",
+                "MAXUS","MAZDA","MERCEDES","MG","MINI","MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO",
+                "POLESTAR","PORSCHE","RENAULT","ROVER","SAAB","SEAT","SKODA","SMART","SPORTEQUIPE",
+                "SSANGYONG","SUBARU","SUZUKI","TATA","TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
+            ] %}
+                <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+        </select>
+
+        <label><b>Tipo Veicolo</b></label>
+        <input type="text" name="tipo_veicolo" id="mod-tipo">
+
+        <label><b>Note</b></label>
+        <textarea name="note" id="mod-note" style="width:100%; height:80px;"></textarea>
+
+        <label><b>Foto (nuova)</b></label>
+        <input type="file" name="foto">
+
+        <label style="margin-top:10px;">
+            <input type="checkbox" name="rimuovi_foto" value="1"> Rimuovi foto esistente
+        </label>
+
+        <button type="submit" style="margin-top:15px; width:100%; padding:10px;
+            background:#0052A3; color:white; border:none; border-radius:8px; font-weight:bold;">
+            Salva Modifiche
+        </button>
+
+        <button type="button" onclick="document.getElementById('popupModifica').style.display='none'"
+            style="margin-top:10px; width:100%; padding:10px; background:#666; color:white; border:none; border-radius:8px;">
+            Annulla
+        </button>
+    </form>
+</div>
+
 <script>
-function applyFilters() {
-    let fProd = document.getElementById("filterProdotto").value.toLowerCase();
-    let fCod = document.getElementById("filterCodice").value.toLowerCase();
-    let fTar = document.getElementById("filterTarga").value.toLowerCase();
-    let fCli = document.getElementById("filterCliente").value.toLowerCase();
-    let fFor = document.getElementById("filterFornitore").value.toLowerCase();
-
-    let selProd = document.getElementById("selectProdotto").value.toLowerCase();
-    let selCod  = document.getElementById("selectCodice").value.toLowerCase();
-    let selTar  = document.getElementById("selectTarga").value.toLowerCase();
-    let selCli  = document.getElementById("selectCliente").value.toLowerCase();
-    let selFor  = document.getElementById("selectFornitore").value.toLowerCase();
-
-    document.querySelectorAll("#tabellaOrdini tbody tr").forEach(row => {
-        let p = row.querySelector(".col-prodotto").textContent.toLowerCase();
-        let c = row.querySelector(".col-codice").textContent.toLowerCase();
-        let t = row.querySelector(".col-targa").textContent.toLowerCase();
-        let cl = row.querySelector(".col-cliente").textContent.toLowerCase();
-        let fr = row.querySelector(".col-fornitore").textContent.toLowerCase();
-
-        let show = true;
-
-        if (fProd && !p.includes(fProd)) show = false;
-        if (fCod && !c.includes(fCod)) show = false;
-        if (fTar && !t.includes(fTar)) show = false;
-        if (fCli && !cl.includes(fCli)) show = false;
-        if (fFor && !fr.includes(fFor)) show = false;
-
-        if (selProd && p !== selProd) show = false;
-        if (selCod && c !== selCod) show = false;
-        if (selTar && t !== selTar) show = false;
-        if (selCli && cl !== selCli) show = false;
-        if (selFor && fr !== selFor) show = false;
-
-        row.style.display = show ? "" : "none";
-    });
+function mostraFoto(path) {
+    document.getElementById("fotoGrande").src = path;
+    document.getElementById("popupFoto").style.display = "block";
 }
 
-document.querySelectorAll("input[id^='filter'], select[id^='select']")
-    .forEach(el => el.addEventListener("input", applyFilters));
+function apriModifica(id, descrizione, codice, marca, tipo, note, foto) {
+    document.getElementById("mod-id").value = id;
+    document.getElementById("mod-descrizione").value = descrizione;
+    document.getElementById("mod-codice").value = codice;
+    document.getElementById("mod-marca").value = marca;
+    document.getElementById("mod-tipo").value = tipo;
+    document.getElementById("mod-note").value = note;
 
-document.getElementById("resetFiltri").addEventListener("click", () => {
-    document.querySelectorAll(".filter-item input").forEach(e => e.value = "");
-    document.querySelectorAll(".filter-item select").forEach(e => e.value = "");
-    document.querySelectorAll("#tabellaOrdini tbody tr").forEach(r => r.style.display = "");
-});
+    document.getElementById("formModifica").action =
+        "/modifica_magazzino/" + id;
+
+    document.getElementById("popupModifica").style.display = "block";
+}
 </script>
 
 {% endblock %}

@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Inserisci Ordine Magazzino{% endblock %}
+{% block title %}Inserisci Ricambio Magazzino{% endblock %}
 
 {% block content %}
 <style>
     .metal-box {
-        background: linear-gradient(180deg, #f0f0f0, #c0c0c0, #e0e0e0);
-        border: 3px solid #000;
+        background: linear-gradient(180deg, #f5faff, #d9e4f0, #eef6ff);
+        border: 3px solid #003366;
         padding: 25px;
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(0,0,0,0.35);
     }
 
     h1 {
-        color: #111;
+        color: #003366;
         text-transform: uppercase;
         font-weight: bold;
-        border-bottom: 3px solid #7a0000;
+        border-bottom: 3px solid #0052A3;
         padding-bottom: 6px;
         margin-bottom: 25px;
     }
@@ -24,17 +24,23 @@
     label {
         font-weight: bold;
         margin-top: 15px;
-        color: #111;
+        color: #003366;
+        display: block;
     }
 
-    input, select {
+    input, select, textarea {
         width: 100%;
         padding: 10px;
         margin-top: 6px;
         border-radius: 8px;
-        border: 2px solid #333;
-        background: linear-gradient(90deg, #e8e8e8, #ffffff, #e8e8e8);
+        border: 2px solid #003366;
+        background: linear-gradient(90deg, #eef6ff, #ffffff, #eef6ff);
         font-size: 15px;
+    }
+
+    textarea {
+        min-height: 90px;
+        resize: vertical;
     }
 
     .btn-metal {
@@ -42,65 +48,115 @@
         width: 100%;
         padding: 12px;
         border-radius: 10px;
-        border: 2px solid #000;
+        border: 2px solid #002244;
         font-size: 17px;
         font-weight: bold;
         cursor: pointer;
         transition: 0.2s;
     }
 
-    .btn-rosso {
-        background: linear-gradient(90deg, #8b0000, #e60000, #8b0000);
+    .btn-blu {
+        background: linear-gradient(90deg, #003366, #0052A3, #003366);
         color: white;
     }
-    .btn-rosso:hover { transform: scale(1.05); }
+    .btn-blu:hover {
+        transform: scale(1.05);
+    }
+
+    /* ANTEPRIMA FOTO */
+    #preview {
+        margin-top: 10px;
+        max-width: 200px;
+        max-height: 200px;
+        display: none;
+        border: 2px solid #003366;
+        border-radius: 8px;
+    }
 
 </style>
 
 <div class="metal-box">
-    <h1>🏎️ Inserisci Ordine Magazzino</h1>
+    <h1>📦 Inserisci Ricambio Magazzino</h1>
 
-    <form method="POST" action="{{ url_for('salva_ordine_magazzino') }}">
+    <form method="POST" action="{{ url_for('salva_magazzino') }}" enctype="multipart/form-data">
 
-        <!-- PRODOTTO ORDINATO -->
-        <label for="prodotto">Prodotto Ordinato *</label>
-        <input type="text" id="prodotto" name="prodotto" required>
+        <!-- DESCRIZIONE -->
+        <label for="descrizione">Descrizione Ricambio *</label>
+        <input type="text" id="descrizione" name="descrizione" placeholder="Es. Filtro olio, Pastiglie freno...">
 
-        <!-- CODICE PRODOTTO (FACOLTATIVO) -->
-        <label for="codice">Codice Prodotto (facoltativo)</label>
-        <input type="text" id="codice" name="codice">
+        <!-- CODICE -->
+        <label for="codice">Codice Prodotto *</label>
+        <input type="text" id="codice" name="codice" placeholder="Es. 1234ABC, 5Q0123456...">
 
-        <!-- TARGA -->
-        <label for="targa">Targa Veicolo *</label>
-        <input type="text" id="targa" name="targa" required>
-
-        <!-- CLIENTE -->
-        <label for="cliente">Cliente (Nome + Cognome) *</label>
-        <input type="text" id="cliente" name="cliente" required>
-
-        <!-- FORNITORE (NUOVO CAMPO FACOLTATIVO) -->
-        <label for="fornitore">Fornitore (facoltativo)</label>
-        <input type="text" id="fornitore" name="fornitore">
-
-        <!-- STATO -->
-        <label for="stato">Stato Ordine *</label>
-        <select id="stato" name="stato" required>
-            <option value="In Stock">In Stock</option>
-            <option value="Ordine Inviato">Ordine Inviato</option>
+        <!-- MARCA VEICOLO -->
+        <label for="marca_veicolo">Marca Veicolo del Ricambio</label>
+        <select id="marca_veicolo" name="marca_veicolo">
+            <option value="">Seleziona marca (facoltativo)</option>
+            {% for m in [
+                "ALFA ROMEO","AUDI","BMW","BYD","CHEVROLET","CHRYSLER",
+                "CITROEN","CUPRA","DACIA","DAEWOO","DAIHATSU","DODGE",
+                "DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X",
+                "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA",
+                "LANCIA","LAND ROVER","LEXUS","LYNK&CO","MAN","MASERATI",
+                "MAXUS","MAZDA","MERCEDES","MG","MINI","MITSUBISHI",
+                "NISSAN","OPEL","PEUGEOT","PIAGGIO","POLESTAR","PORSCHE",
+                "RENAULT","ROVER","SAAB","SEAT","SKODA","SMART",
+                "SPORTEQUIPE","SSANGYONG","SUBARU","SUZUKI","TATA",
+                "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
+            ] %}
+                <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
         </select>
 
+        <!-- TIPO VEICOLO -->
+        <label for="tipo_veicolo">Tipo Veicolo del Ricambio</label>
+        <input type="text" id="tipo_veicolo" name="tipo_veicolo" placeholder="Es. SUV, Berlina, Furgone...">
+
+        <!-- NOTE -->
+        <label for="note">Note Aggiuntive</label>
+        <textarea id="note" name="note" placeholder="Note su compatibilità, condizioni, ubicazione in magazzino..."></textarea>
+
+        <!-- FOTO -->
+        <label for="foto">Fotografia del Ricambio (facoltativa)</label>
+        <input type="file" id="foto" name="foto" accept="image/*">
+
+        <img id="preview" alt="Anteprima Foto">
+
         <!-- BOTTONE -->
-        <button type="submit" class="btn-metal btn-rosso">✔️ Salva Ordine</button>
+        <button type="submit" class="btn-metal btn-blu">✔️ Salva Ricambio</button>
 
     </form>
 </div>
 
 <script>
-/* VALIDAZIONE CLIENTE: deve contenere almeno 2 parole */
+/* Anteprima foto */
+document.getElementById("foto").addEventListener("change", function() {
+    const file = this.files[0];
+    const preview = document.getElementById("preview");
+
+    if (!file) {
+        preview.style.display = "none";
+        return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+        alert("Il file selezionato non è una immagine!");
+        this.value = "";
+        preview.style.display = "none";
+        return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+});
+
+/* Validazione: descrizione OPPURE codice */
 document.querySelector("form").addEventListener("submit", function(e) {
-    const cliente = document.getElementById("cliente").value.trim();
-    if (cliente.split(" ").length < 2) {
-        alert("Inserire nome e cognome del cliente.");
+    const descrizione = document.getElementById("descrizione").value.trim();
+    const codice = document.getElementById("codice").value.trim();
+
+    if (!descrizione && !codice) {
+        alert("Inserisci almeno la DESCRIZIONE oppure il CODICE del ricambio.");
         e.preventDefault();
     }
 });

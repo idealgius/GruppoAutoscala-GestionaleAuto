@@ -2087,10 +2087,10 @@ def storico():
 # ORDINI MAGAZZINO - ROUTE ESSENZIALI
 # =====================================
 
-# ========== 1) GIACENZA MAGAZZINO ==========
+# ========== 1) GIACENZA ORDINI ==========
 @app.route("/ordini/giacenza")
 @login_required
-def giacenza_magazzino():
+def giacenza_ordini():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
 
@@ -2098,22 +2098,22 @@ def giacenza_magazzino():
     ordini = cur.fetchall()
 
     conn.close()
-    return render_template("giacenza_magazzino.html", ordini=ordini)
+    return render_template("giacenza_ordini.html", ordini=ordini)
 
 
 
 # ========== 2) INSERISCI ORDINE MAGAZZINO ==========
 @app.route("/ordini/inserisci")
 @login_required
-def inserisci_magazzino():
-    return render_template("inserisci_magazzino.html")
+def inserisci_ordine():
+    return render_template("inserisci_ordine.html")
 
 
 
 # ========== 3) SALVA NUOVO ORDINE ==========
 @app.route("/ordini/salva", methods=["POST"])
 @login_required
-def salva_ordine_magazzino():
+def salva_ordine_ricambi():
 
     prodotto = request.form.get("prodotto")
     codice = request.form.get("codice")
@@ -2146,7 +2146,7 @@ def salva_ordine_magazzino():
     )
 
     flash("Ordine inserito correttamente!", "success")
-    return redirect(url_for("giacenza_magazzino"))
+    return redirect(url_for("giacenza_ordini"))
 
 # ========== 4) CAMBIO STATO DIRETTO (DA GIACENZA) ==========
 @app.route("/ordini/cambia_stato/<int:id>/<string:nuovo_stato>")
@@ -2163,7 +2163,7 @@ def cambia_stato_ordine(id, nuovo_stato):
 
     if nuovo_stato not in stati_permesi:
         flash("Stato non valido.", "error")
-        return redirect(url_for("giacenza_magazzino"))
+        return redirect(url_for("giacenza_ordino"))
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -2186,7 +2186,7 @@ def cambia_stato_ordine(id, nuovo_stato):
     )
 
     flash("Stato aggiornato!", "success")
-    return redirect(url_for("giacenza_magazzino"))
+    return redirect(url_for("giacenza_ordini"))
 
 
 
@@ -2212,8 +2212,200 @@ def elimina_ordine(id):
     )
 
     flash("Ordine eliminato!", "success")
+    return redirect(url_for("giacenza_ordini"))
+# ===============================
+#   📦 GESTIONE MAGAZZINO
+# ===============================
+
+from werkzeug.utils import secure_filename
+import os
+
+# cartella foto
+UPLOAD_FOLDER_MAG = os.path.join('static', 'foto_magazzino')
+os.makedirs(UPLOAD_FOLDER_MAG, exist_ok=True)
+
+
+# ---------------------------------------
+# 📄 PAGINA GIACENZA MAGAZZINO
+# ---------------------------------------
+@app.route("/giacenza_magazzino")
+def giacenza_magazzino():
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, descrizione, codice, marca_veicolo, tipo_veicolo, note, foto
+        FROM magazzino
+        ORDER BY id DESC
+    """)
+
+    ricambi = [
+        {
+            "id": r[0],
+            "descrizione": r[1],
+            "codice": r[2],
+            "marca_veicolo": r[3],
+            "tipo_veicolo": r[4],
+            "note": r[5],
+            "foto": r[6],
+        }
+        for r in cur.fetchall()
+    ]
+
+    cur.close()
+    conn.close()
+
+    return render_template("giacenza_magazzino.html", ricambi=ricambi)
+
+# ---------------------------------------
+# ➕ PAGINA INSERISCI RICAMBIO MAGAZZINO
+# ---------------------------------------
+@app.route("/inserisci_magazzino")
+def inserisci_magazzino():
+    return render_template("inserisci_magazzino.html")
+
+# ---------------------------------------
+# 💾 SALVATAGGIO RICAMBIO + FOTO
+# ---------------------------------------
+@app.route("/salva_magazzino", methods=["POST"])
+def salva_magazzino():
+    descrizione = request.form.get("descrizione", "").strip()
+    codice = request.form.get("codice", "").strip()
+    marca = request.form.get("marca_veicolo", "").strip()
+    tipo = request.form.get("tipo_veicolo", "").strip()
+    note = request.form.get("note", "").strip()
+    foto = request.files.get("foto")
+
+    # ❗ Validazione: deve esserci descrizione O codice
+    if not descrizione and not codice:
+        flash("Inserire almeno una descrizione o un codice.")
+        return redirect(url_for("inserisci_magazzino"))
+
+    # 📸 GESTIONE FOTO (CORRETTA)
+    foto_path = None
+    if foto and foto.filename != "":
+        filename = secure_filename(foto.filename)
+
+        # Percorso ASSOLUTO verso /static/foto_magazzino/
+        upload_folder = os.path.join(app.root_path, "static", "foto_magazzino")
+
+        # crea cartella se non esiste
+        os.makedirs(upload_folder, exist_ok=True)
+
+        # salva fisicamente il file
+        full_path = os.path.join(upload_folder, filename)
+        foto.save(full_path)
+
+        # Percorso da salvare nel DB (usato da <img src="...">)
+        foto_path = f"/static/foto_magazzino/{filename}"
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        INSERT INTO magazzino (descrizione, codice, marca_veicolo, tipo_veicolo, note, foto)
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """, (descrizione, codice, marca, tipo, note, foto_path))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Ricambio inserito correttamente!")
+    return redirect(url_for("giacenza_magazzino"))
+@app.route("/modifica_magazzino/<int:id>", methods=["POST"])
+def modifica_magazzino(id):
+    descrizione = request.form.get("descrizione", "").strip()
+    codice = request.form.get("codice", "").strip()
+    marca = request.form.get("marca_veicolo", "").strip()
+    tipo = request.form.get("tipo_veicolo", "").strip()
+    note = request.form.get("note", "").strip()
+    rimuovi_foto = request.form.get("rimuovi_foto")
+    nuova_foto = request.files.get("foto")
+
+    # ❗ VALIDAZIONE: almeno descrizione o codice
+    if not descrizione and not codice:
+        flash("Inserire almeno una descrizione o un codice.")
+        return redirect(url_for("giacenza_magazzino"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Recupero percorso foto attuale
+    cur.execute("SELECT foto FROM magazzino WHERE id = %s", (id,))
+    row = cur.fetchone()
+    foto_attuale = row[0] if row else None
+
+    foto_path = foto_attuale
+
+    # 📌 1) RIMOZIONE FOTO SE FLAGGATO
+    if rimuovi_foto and foto_attuale:
+        try:
+            if os.path.exists(foto_attuale):
+                os.remove(foto_attuale)
+        except:
+            pass  # non bloccare per errori nella rimozione file
+        foto_path = None
+
+    # 📌 2) NUOVA FOTO CARICATA → sostituisce quella esistente
+    if nuova_foto and nuova_foto.filename != "":
+        # Se c'è una vecchia foto la elimino
+        if foto_attuale and os.path.exists(foto_attuale):
+            try:
+                os.remove(foto_attuale)
+            except:
+                pass
+
+        filename = secure_filename(nuova_foto.filename)
+        foto_path = "static/foto_magazzino/" + filename
+        nuova_foto.save(foto_path)
+
+    # 📌 UPDATE nel database
+    cur.execute("""
+        UPDATE magazzino
+        SET descrizione = %s,
+            codice = %s,
+            marca_veicolo = %s,
+            tipo_veicolo = %s,
+            note = %s,
+            foto = %s
+        WHERE id = %s
+    """, (descrizione, codice, marca, tipo, note, foto_path, id))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Ricambio aggiornato correttamente!")
     return redirect(url_for("giacenza_magazzino"))
 
+# ---------------------------------------
+# ❌ ELIMINA RICAMBIO + FOTO
+# ---------------------------------------
+@app.route("/elimina_magazzino/<int:id>")
+def elimina_magazzino(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    # Prima recuperiamo l’eventuale foto
+    cur.execute("SELECT foto FROM magazzino WHERE id = %s", (id,))
+    row = cur.fetchone()
+
+    if row and row[0]:
+        try:
+            os.remove(row[0])  # elimina file immagine
+        except:
+            pass
+
+    # Elimina la riga dal DB
+    cur.execute("DELETE FROM magazzino WHERE id = %s", (id,))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Ricambio eliminato.")
+    return redirect(url_for("giacenza_magazzino"))
 # =====================================
 # AVVIO SERVER
 # =====================================
