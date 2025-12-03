@@ -121,6 +121,35 @@
         font-size:16px;
         font-weight:bold;
     }
+
+    /* PAGINAZIONE */
+    .pagination {
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .page-btn {
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #003366;
+        background: #eef6ff;
+        cursor: pointer;
+        font-weight: bold;
+        min-width: 32px;
+    }
+
+    .page-btn.active {
+        background: #003366;
+        color: white;
+    }
+
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
 </style>
 
 <div class="metal-box">
@@ -195,7 +224,7 @@
                 <td>
                     {% if r.foto %}
                         <button class="btn-foto"
-                            onclick="mostraFoto('{{ r.foto }}')">📸</button>
+                                onclick="mostraFoto('{{ r.foto }}')">📸</button>
                     {% else %}
                         -
                     {% endif %}
@@ -203,7 +232,15 @@
 
                 <td>
                     <button class="btn-modifica"
-                        onclick="apriModifica({{ r.id }}, '{{ r.descrizione|escape }}', '{{ r.codice|escape }}', '{{ r.marca_veicolo|escape }}', '{{ r.tipo_veicolo|escape }}', '{{ r.note|escape }}', '{{ r.foto }}')">
+                        onclick="apriModifica(
+                            {{ r.id }},
+                            '{{ r.descrizione|escape }}',
+                            '{{ r.codice|escape }}',
+                            '{{ r.marca_veicolo|escape }}',
+                            '{{ r.tipo_veicolo|escape }}',
+                            '{{ r.note|escape }}',
+                            '{{ r.foto or "" }}'
+                        )">
                         ✏️
                     </button>
                 </td>
@@ -219,6 +256,9 @@
             {% endfor %}
         </tbody>
     </table>
+
+    <!-- CONTENITORE PAGINAZIONE -->
+    <div id="pagination" class="pagination"></div>
 
     {% endif %}
 </div>
@@ -250,6 +290,7 @@
     <form id="formModifica" method="POST" enctype="multipart/form-data">
 
         <input type="hidden" name="id" id="mod-id">
+        <input type="hidden" name="foto_attuale" id="mod-foto-attuale">
 
         <label><b>Descrizione</b></label>
         <input type="text" name="descrizione" id="mod-descrizione">
@@ -304,6 +345,7 @@ function mostraFoto(path) {
 }
 
 function apriModifica(id, descrizione, codice, marca, tipo, note, foto) {
+
     document.getElementById("mod-id").value = id;
     document.getElementById("mod-descrizione").value = descrizione;
     document.getElementById("mod-codice").value = codice;
@@ -311,11 +353,166 @@ function apriModifica(id, descrizione, codice, marca, tipo, note, foto) {
     document.getElementById("mod-tipo").value = tipo;
     document.getElementById("mod-note").value = note;
 
-    document.getElementById("formModifica").action =
-        "/modifica_magazzino/" + id;
+    document.getElementById("mod-foto-attuale").value = foto;
+
+    document.getElementById("formModifica").action = "/modifica_magazzino/" + id;
 
     document.getElementById("popupModifica").style.display = "block";
 }
+
+/* ===========================
+   FILTRI + ORDINAMENTO + PAGINAZIONE
+   =========================== */
+document.addEventListener("DOMContentLoaded", function () {
+    const tbody = document.querySelector("#tabellaMagazzino tbody");
+    if (!tbody) return;
+
+    const allRows = Array.from(tbody.querySelectorAll("tr"));
+    const pageSize = 20;
+    let currentPage = 1;
+
+    const filterDescrizione = document.getElementById("filterDescrizione");
+    const filterCodice = document.getElementById("filterCodice");
+    const filterMarcaVeicolo = document.getElementById("filterMarcaVeicolo");
+    const filterTipo = document.getElementById("filterTipo");
+    const resetBtn = document.getElementById("resetFiltri");
+    const paginationDiv = document.getElementById("pagination");
+
+    function getFilteredRows() {
+        const descVal = filterDescrizione.value.trim().toLowerCase();
+        const codVal = filterCodice.value.trim().toLowerCase();
+        const marcaVal = filterMarcaVeicolo.value.trim().toLowerCase();
+        const tipoVal = filterTipo.value.trim().toLowerCase();
+
+        return allRows.filter(row => {
+            const descText = (row.querySelector(".col-descrizione")?.textContent || "").toLowerCase();
+            const codText  = (row.querySelector(".col-codice")?.textContent || "").toLowerCase();
+            const marcaText= (row.querySelector(".col-marca")?.textContent || "").toLowerCase();
+            const tipoText = (row.querySelector(".col-tipo")?.textContent || "").toLowerCase();
+
+            if (descVal && !descText.includes(descVal)) return false;
+            if (codVal && !codText.includes(codVal)) return false;
+            if (marcaVal && marcaText !== marcaVal) return false;
+            if (tipoVal && !tipoText.includes(tipoVal)) return false;
+
+            return true;
+        });
+    }
+
+    function renderPagination(totalPages) {
+        paginationDiv.innerHTML = "";
+        if (totalPages <= 1) return;
+
+        const prevBtn = document.createElement("button");
+        prevBtn.textContent = "«";
+        prevBtn.className = "page-btn";
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.addEventListener("click", function () {
+            if (currentPage > 1) {
+                currentPage--;
+                render();
+            }
+        });
+        paginationDiv.appendChild(prevBtn);
+
+        for (let p = 1; p <= totalPages; p++) {
+            const btn = document.createElement("button");
+            btn.textContent = p;
+            btn.className = "page-btn" + (p === currentPage ? " active" : "");
+            btn.addEventListener("click", function () {
+                currentPage = p;
+                render();
+            });
+            paginationDiv.appendChild(btn);
+        }
+
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = "»";
+        nextBtn.className = "page-btn";
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.addEventListener("click", function () {
+            if (currentPage < totalPages) {
+                currentPage++;
+                render();
+            }
+        });
+        paginationDiv.appendChild(nextBtn);
+    }
+
+    function render() {
+        const filtered = getFilteredRows();
+
+        // ORDINA PER MARCA, POI PER DESCRIZIONE
+        filtered.sort((a, b) => {
+            const marcaA = (a.querySelector(".col-marca")?.textContent || "").trim().toLowerCase();
+            const marcaB = (b.querySelector(".col-marca")?.textContent || "").trim().toLowerCase();
+
+            if (marcaA < marcaB) return -1;
+            if (marcaA > marcaB) return 1;
+
+            const descA = (a.querySelector(".col-descrizione")?.textContent || "").trim().toLowerCase();
+            const descB = (b.querySelector(".col-descrizione")?.textContent || "").trim().toLowerCase();
+
+            return descA.localeCompare(descB);
+        });
+
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        // Nascondi tutte le righe
+        allRows.forEach(r => { r.style.display = "none"; });
+
+        // Mostra solo le righe della pagina corrente e riordinale nel DOM
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pageRows = filtered.slice(start, end);
+
+        pageRows.forEach(row => {
+            row.style.display = "";
+            tbody.appendChild(row);  // append le riordina secondo il sort
+        });
+
+        renderPagination(totalPages);
+    }
+
+    function resetFiltri() {
+        filterDescrizione.value = "";
+        filterCodice.value = "";
+        filterMarcaVeicolo.value = "";
+        filterTipo.value = "";
+        currentPage = 1;
+        render();
+    }
+
+    filterDescrizione.addEventListener("input", function () {
+        currentPage = 1;
+        render();
+    });
+
+    filterCodice.addEventListener("input", function () {
+        currentPage = 1;
+        render();
+    });
+
+    filterMarcaVeicolo.addEventListener("change", function () {
+        currentPage = 1;
+        render();
+    });
+
+    filterTipo.addEventListener("input", function () {
+        currentPage = 1;
+        render();
+    });
+
+    if (resetBtn) {
+        resetBtn.addEventListener("click", function () {
+            resetFiltri();
+        });
+    }
+
+    // Primo render all'apertura pagina
+    render();
+});
 </script>
 
 {% endblock %}

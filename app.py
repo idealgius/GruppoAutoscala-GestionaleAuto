@@ -1,19 +1,40 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-from flask import request, redirect, url_for, session
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, session, flash, jsonify
+)
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import hashlib
 from functools import wraps
 import json
-
-# =====================================
-# CONFIG
-# =====================================
 import os
-import pytz   # ← AGGIUNTO
-from flask import Flask
+import pytz
+import uuid
 
+# =====================================
+# DOTENV - CARICA IL FILE .env PRIMA DI TUTTO
+# =====================================
+from dotenv import load_dotenv
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+
+# =====================================
+# SUPABASE STORAGE VIA REST API (NO LIBRERIA BUGGATA)
+# =====================================
+import requests
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise RuntimeError("❌ ERRORE: Variabili SUPABASE_URL o SUPABASE_KEY non trovate nel .env")
+
+# URL base dello storage Supabase
+SUPABASE_STORAGE_URL = f"{SUPABASE_URL}/storage/v1/object"
+
+# =====================================
+# FLASK APP
+# =====================================
 app = Flask(__name__)
 
 # =====================================
@@ -2084,7 +2105,7 @@ def storico():
     return render_template('storico.html', storico=storico_rows)
 
 # =====================================
-# ORDINI MAGAZZINO - ROUTE ESSENZIALI
+# ORDINI RICAMBI - ROUTE ESSENZIALI
 # =====================================
 
 # ========== 1) GIACENZA ORDINI ==========
@@ -2102,7 +2123,7 @@ def giacenza_ordini():
 
 
 
-# ========== 2) INSERISCI ORDINE MAGAZZINO ==========
+# ========== 2) INSERISCI ORDINE RICAMBIO ==========
 @app.route("/ordini/inserisci")
 @login_required
 def inserisci_ordine():
@@ -2217,14 +2238,6 @@ def elimina_ordine(id):
 #   📦 GESTIONE MAGAZZINO
 # ===============================
 
-from werkzeug.utils import secure_filename
-import os
-
-# cartella foto
-UPLOAD_FOLDER_MAG = os.path.join('static', 'foto_magazzino')
-os.makedirs(UPLOAD_FOLDER_MAG, exist_ok=True)
-
-
 # ---------------------------------------
 # 📄 PAGINA GIACENZA MAGAZZINO
 # ---------------------------------------
@@ -2265,7 +2278,7 @@ def inserisci_magazzino():
     return render_template("inserisci_magazzino.html")
 
 # ---------------------------------------
-# 💾 SALVATAGGIO RICAMBIO + FOTO
+# 💾 SALVATAGGIO RICAMBIO + FOTO (SUPABASE STORAGE VIA REST)
 # ---------------------------------------
 @app.route("/salva_magazzino", methods=["POST"])
 def salva_magazzino():
@@ -2276,36 +2289,46 @@ def salva_magazzino():
     note = request.form.get("note", "").strip()
     foto = request.files.get("foto")
 
-    # ❗ Validazione: deve esserci descrizione O codice
+    # ❗ VALIDAZIONE
     if not descrizione and not codice:
         flash("Inserire almeno una descrizione o un codice.")
         return redirect(url_for("inserisci_magazzino"))
 
-    # 📸 GESTIONE FOTO (CORRETTA)
-    foto_path = None
+    # 📸 UPLOAD FOTO SU SUPABASE STORAGE
+    foto_url = None
+
     if foto and foto.filename != "":
-        filename = secure_filename(foto.filename)
+        estensione = foto.filename.rsplit(".", 1)[1].lower()
+        nome_unico = f"{uuid.uuid4().hex}.{estensione}"
 
-        # Percorso ASSOLUTO verso /static/foto_magazzino/
-        upload_folder = os.path.join(app.root_path, "static", "foto_magazzino")
+        upload_url = f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_unico}"
 
-        # crea cartella se non esiste
-        os.makedirs(upload_folder, exist_ok=True)
+        res = requests.post(
+            upload_url,
+            headers={
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": foto.content_type,
+                "x-upsert": "true"  # permette di sovrascrivere se serve
+            },
+            data=foto.read()
+        )
 
-        # salva fisicamente il file
-        full_path = os.path.join(upload_folder, filename)
-        foto.save(full_path)
+        if res.status_code not in [200, 201]:
+            flash(f"Errore durante l'upload della foto su Supabase.")
+            return redirect(url_for("inserisci_magazzino"))
 
-        # Percorso da salvare nel DB (usato da <img src="...">)
-        foto_path = f"/static/foto_magazzino/{filename}"
+        foto_url = (
+            f"{SUPABASE_URL}/storage/v1/object/public/foto_magazzino/{nome_unico}"
+        )
 
+    # 📌 SALVATAGGIO NEL DB
     conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("""
         INSERT INTO magazzino (descrizione, codice, marca_veicolo, tipo_veicolo, note, foto)
         VALUES (%s, %s, %s, %s, %s, %s)
-    """, (descrizione, codice, marca, tipo, note, foto_path))
+    """, (descrizione, codice, marca, tipo, note, foto_url))
 
     conn.commit()
     cur.close()
@@ -2313,6 +2336,10 @@ def salva_magazzino():
 
     flash("Ricambio inserito correttamente!")
     return redirect(url_for("giacenza_magazzino"))
+
+# ---------------------------------------
+# ✏️ MODIFICA RICAMBIO + GESTIONE FOTO (SUPABASE STORAGE VIA REST)
+# ---------------------------------------
 @app.route("/modifica_magazzino/<int:id>", methods=["POST"])
 def modifica_magazzino(id):
     descrizione = request.form.get("descrizione", "").strip()
@@ -2320,10 +2347,11 @@ def modifica_magazzino(id):
     marca = request.form.get("marca_veicolo", "").strip()
     tipo = request.form.get("tipo_veicolo", "").strip()
     note = request.form.get("note", "").strip()
+
     rimuovi_foto = request.form.get("rimuovi_foto")
     nuova_foto = request.files.get("foto")
 
-    # ❗ VALIDAZIONE: almeno descrizione o codice
+    # ❗ VALIDAZIONE
     if not descrizione and not codice:
         flash("Inserire almeno una descrizione o un codice.")
         return redirect(url_for("giacenza_magazzino"))
@@ -2331,36 +2359,76 @@ def modifica_magazzino(id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Recupero percorso foto attuale
+    # Recupera foto attuale
     cur.execute("SELECT foto FROM magazzino WHERE id = %s", (id,))
     row = cur.fetchone()
     foto_attuale = row[0] if row else None
+    foto_finale = foto_attuale
 
-    foto_path = foto_attuale
-
-    # 📌 1) RIMOZIONE FOTO SE FLAGGATO
+    # ---------------------------------------------------------
+    # 🗑️ RIMOZIONE FOTO
+    # ---------------------------------------------------------
     if rimuovi_foto and foto_attuale:
-        try:
-            if os.path.exists(foto_attuale):
-                os.remove(foto_attuale)
-        except:
-            pass  # non bloccare per errori nella rimozione file
-        foto_path = None
+        nome_file = foto_attuale.split("/")[-1]
 
-    # 📌 2) NUOVA FOTO CARICATA → sostituisce quella esistente
+        try:
+            requests.delete(
+                f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_file}",
+                headers={"Authorization": f"Bearer {SUPABASE_KEY}"}
+            )
+            foto_finale = None
+        except Exception as e:
+            print("Errore rimozione foto da Supabase:", e)
+
+    # ---------------------------------------------------------
+    # 📸 NUOVA FOTO — CARICAMENTO SU SUPABASE
+    # ---------------------------------------------------------
     if nuova_foto and nuova_foto.filename != "":
-        # Se c'è una vecchia foto la elimino
-        if foto_attuale and os.path.exists(foto_attuale):
+        estensione = nuova_foto.filename.rsplit(".", 1)[1].lower()
+        nome_unico = f"{uuid.uuid4().hex}.{estensione}"
+
+        # Se c'era una vecchia foto → eliminala
+        if foto_attuale:
             try:
-                os.remove(foto_attuale)
+                vecchio = foto_attuale.split("/")[-1]
+                requests.delete(
+                    f"{SUPABASE_STORAGE_URL}/foto_magazzino/{vecchio}",
+                    headers={"Authorization": f"Bearer {SUPABASE_KEY}"}
+                )
             except:
                 pass
 
-        filename = secure_filename(nuova_foto.filename)
-        foto_path = "static/foto_magazzino/" + filename
-        nuova_foto.save(foto_path)
+        # Upload REST
+        upload_url = f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_unico}"
 
-    # 📌 UPDATE nel database
+        try:
+            res = requests.post(
+                upload_url,
+                headers={
+                    "Authorization": f"Bearer {SUPABASE_KEY}",
+                    "Content-Type": nuova_foto.content_type
+                },
+                data=nuova_foto.read()
+            )
+
+            if res.status_code not in (200, 201):
+                print("Errore Upload:", res.text)
+                flash("Errore caricamento nuova foto su Supabase.")
+                return redirect(url_for("giacenza_magazzino"))
+
+            # URL pubblica finale
+            foto_finale = (
+                f"{SUPABASE_URL}/storage/v1/object/public/foto_magazzino/{nome_unico}"
+            )
+
+        except Exception as e:
+            print("Errore Upload:", e)
+            flash("Errore caricamento nuova foto su Supabase.")
+            return redirect(url_for("giacenza_magazzino"))
+
+    # ---------------------------------------------------------
+    # 💾 AGGIORNA DATABASE
+    # ---------------------------------------------------------
     cur.execute("""
         UPDATE magazzino
         SET descrizione = %s,
@@ -2370,7 +2438,62 @@ def modifica_magazzino(id):
             note = %s,
             foto = %s
         WHERE id = %s
-    """, (descrizione, codice, marca, tipo, note, foto_path, id))
+    """, (descrizione, codice, marca, tipo, note, foto_finale, id))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    flash("Ricambio aggiornato correttamente!")
+    return redirect(url_for("giacenza_magazzino"))
+    # ---------------------------------------------------------
+    # 📸 CASO 2: NUOVA FOTO CARICATA
+    # ---------------------------------------------------------
+    if nuova_foto and nuova_foto.filename != "":
+        # elimina vecchia foto se esiste
+        if foto_attuale:
+            nome_file = foto_attuale.split("/")[-1]
+            requests.delete(
+                f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_file}",
+                headers={"Authorization": f"Bearer {SUPABASE_KEY}"}
+            )
+
+        estensione = nuova_foto.filename.rsplit(".", 1)[1].lower()
+        nome_unico = f"{uuid.uuid4().hex}.{estensione}"
+
+        upload_url = f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_unico}"
+
+        res = requests.post(
+            upload_url,
+            headers={
+                "Authorization": f"Bearer {SUPABASE_KEY}",
+                "Content-Type": nuova_foto.content_type,
+                "x-upsert": "true"
+            },
+            data=nuova_foto.read()
+        )
+
+        if res.status_code not in [200, 201]:
+            flash("Errore caricamento nuova foto su Supabase.")
+            return redirect(url_for("giacenza_magazzino"))
+
+        foto_finale = (
+            f"{SUPABASE_URL}/storage/v1/object/public/foto_magazzino/{nome_unico}"
+        )
+
+    # ---------------------------------------------------------
+    # 💾 AGGIORNA DB
+    # ---------------------------------------------------------
+    cur.execute("""
+        UPDATE magazzino
+        SET descrizione = %s,
+            codice = %s,
+            marca_veicolo = %s,
+            tipo_veicolo = %s,
+            note = %s,
+            foto = %s
+        WHERE id = %s
+    """, (descrizione, codice, marca, tipo, note, foto_finale, id))
 
     conn.commit()
     cur.close()
@@ -2380,27 +2503,30 @@ def modifica_magazzino(id):
     return redirect(url_for("giacenza_magazzino"))
 
 # ---------------------------------------
-# ❌ ELIMINA RICAMBIO + FOTO
+# ❌ ELIMINA RICAMBIO + FOTO DA SUPABASE
 # ---------------------------------------
 @app.route("/elimina_magazzino/<int:id>")
 def elimina_magazzino(id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # Prima recuperiamo l’eventuale foto
+    # recupera foto dal DB
     cur.execute("SELECT foto FROM magazzino WHERE id = %s", (id,))
     row = cur.fetchone()
+    foto_url = row[0] if row else None
 
-    if row and row[0]:
-        try:
-            os.remove(row[0])  # elimina file immagine
-        except:
-            pass
+    if foto_url:
+        nome_file = foto_url.split("/")[-1]
 
-    # Elimina la riga dal DB
+        requests.delete(
+            f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_file}",
+            headers={"Authorization": f"Bearer {SUPABASE_KEY}"}
+        )
+
+    # elimina la riga DB
     cur.execute("DELETE FROM magazzino WHERE id = %s", (id,))
-
     conn.commit()
+
     cur.close()
     conn.close()
 
