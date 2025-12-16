@@ -1753,7 +1753,7 @@ def inserisci_gomme():
         return redirect(url_for('scelta_login'))
 
     marche = ["Avon", "Barum", "Bridgestone", "Continental", 
-              "Goodyear", "Hankook", "Kleber", 
+              "Fortune", "Goodyear", "Hankook", "Kleber", 
               "Kumho", "Ling Long", "Michelin", "Ovation", "Pirelli"]
     marche.sort()
 
