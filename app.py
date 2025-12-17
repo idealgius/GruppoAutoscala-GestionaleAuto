@@ -2505,25 +2505,28 @@ def modifica_magazzino(id):
 # ---------------------------------------
 # ❌ ELIMINA RICAMBIO + FOTO DA SUPABASE
 # ---------------------------------------
-@app.route("/elimina_magazzino/<int:id>")
+@app.route("/elimina_magazzino/<int:id>", methods=["POST"])
 def elimina_magazzino(id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    # recupera foto dal DB
+    # recupera eventuale foto dal DB
     cur.execute("SELECT foto FROM magazzino WHERE id = %s", (id,))
     row = cur.fetchone()
     foto_url = row[0] if row else None
 
+    # elimina foto da Supabase Storage
     if foto_url:
         nome_file = foto_url.split("/")[-1]
 
         requests.delete(
             f"{SUPABASE_STORAGE_URL}/foto_magazzino/{nome_file}",
-            headers={"Authorization": f"Bearer {SUPABASE_KEY}"}
+            headers={
+                "Authorization": f"Bearer {SUPABASE_KEY.strip()}"
+            }
         )
 
-    # elimina la riga DB
+    # elimina record dal database
     cur.execute("DELETE FROM magazzino WHERE id = %s", (id,))
     conn.commit()
 
@@ -2532,6 +2535,7 @@ def elimina_magazzino(id):
 
     flash("Ricambio eliminato.")
     return redirect(url_for("giacenza_magazzino"))
+
 # =====================================
 # AVVIO SERVER
 # =====================================
