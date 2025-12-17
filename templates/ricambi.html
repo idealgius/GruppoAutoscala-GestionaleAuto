@@ -98,8 +98,13 @@
 
         <td class="action-buttons">
           <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica-btn">✏️</a>
-          <a href="/elimina_ricambio/{{ r['id'] }}" class="elimina-btn"
-             onclick="return confirm('Eliminare questo ricambio?')">🗑️</a>
+
+          <form method="POST"
+                action="{{ url_for('elimina_magazzino', id=r['id']) }}"
+                style="display:inline;"
+                onsubmit="return confirm('Eliminare questo ricambio?')">
+            <button type="submit" class="elimina-btn">🗑️</button>
+          </form>
         </td>
       </tr>
       {% endfor %}
