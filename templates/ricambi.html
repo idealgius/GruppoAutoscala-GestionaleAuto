@@ -100,7 +100,7 @@
           <a href="/modifica_ricambio/{{ r['id'] }}" class="modifica-btn">✏️</a>
 
           <form method="POST"
-                action="{{ url_for('elimina_magazzino', id=r['id']) }}"
+                action="{{ url_for('elimina_ricambio', id=r['id']) }}"
                 style="display:inline;"
                 onsubmit="return confirm('Eliminare questo ricambio?')">
             <button type="submit" class="elimina-btn">🗑️</button>
