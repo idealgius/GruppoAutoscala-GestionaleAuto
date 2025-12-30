@@ -15,7 +15,7 @@
   {% endif %}
 {% endwith %}
 
-<form action="/aggiorna_ricambio/{{ ricambio['id'] }}" method="POST"
+<form action="{{ url_for('modifica_ricambio', id=ricambio['id']) }}" method="POST">
       style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:14px;">
 
     <!-- NOME -->
