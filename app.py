@@ -850,7 +850,7 @@ def elimina_ricambio(id):
             flash("Ricambio non trovato o non autorizzato.", "danger")
             return redirect(url_for('lista_ricambi'))
 
-        codice = row[0]
+        codice = row[0]z
 
         # 2️⃣ Cancello solo i legami sostituzione collegati
         cur.execute("""
@@ -1753,8 +1753,8 @@ def inserisci_gomme():
         return redirect(url_for('scelta_login'))
 
     marche = ["Avon", "Barum", "Bridgestone", "Continental", 
-              "Fortune", "Goodyear", "Hankook", "Kleber", 
-              "Kumho", "Ling Long", "Michelin", "Ovation", "Pirelli"]
+              "Davanti Tyres", "Fortune", "Goodyear", "Hankook", "Kleber", 
+              "Kumho", "Ling Long", "Michelin", "Nankang", "Ovation", "Pirelli"]
     marche.sort()
 
     # Manteniamo i valori inseriti
