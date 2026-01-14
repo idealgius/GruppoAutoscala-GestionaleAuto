@@ -850,7 +850,7 @@ def elimina_ricambio(id):
             flash("Ricambio non trovato o non autorizzato.", "danger")
             return redirect(url_for('lista_ricambi'))
 
-        codice = row[0]z
+        codice = row[0]
 
         # 2️⃣ Cancello solo i legami sostituzione collegati
         cur.execute("""
