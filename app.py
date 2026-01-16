@@ -477,7 +477,7 @@ def inserisci_vettura():
         "CITROEN", "CUPRA", "DACIA", "DAEWOO", "DAIHATSU", "DODGE",
         "DR", "EVO", "FIAT", "FORD", "HONDA", "HYUNDAI", "ICH-X",
         "INFINITI", "ISUZU", "IVECO", "JAGUAR", "JEEP", "KIA", "LADA",
-        "LANCIA", "LAND ROVER", "LEXUS", "LYNK&CO", "MAN", "MASERATI",
+        "LANCIA", "LAND ROVER", "LEXUS", "LYNK&CO", "MAHINDRA", "MAN", "MASERATI",
         "MAXUS", "MAZDA", "MERCEDES", "MG", "MINI", "MITSUBISHI",
         "NISSAN", "OPEL", "PEUGEOT", "PIAGGIO", "POLESTAR", "PORSCHE",
         "RENAULT", "ROVER", "SAAB", "SEAT", "SKODA", "SMART",
