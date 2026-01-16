@@ -3,7 +3,7 @@
 {% block title %}Modifica Ricambio{% endblock %}
 
 {% block content %}
-<h1>✏️ Modifica Ricambio</h1>
+<h1 style="text-align:center;">✏️ Modifica Ricambio</h1>
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
@@ -15,29 +15,51 @@
   {% endif %}
 {% endwith %}
 
-<form action="{{ url_for('modifica_ricambio', id=ricambio['id']) }}" method="POST">
+<form action="{{ url_for('modifica_ricambio', id=ricambio['id']) }}" method="POST"
       style="max-width:600px; margin:0 auto; display:flex; flex-direction:column; gap:14px;">
 
-    <!-- NOME -->
+    <!-- =============================== -->
+    <!-- NOME                            -->
+    <!-- =============================== -->
     <label for="nome">Nome ricambio:</label>
     <input type="text" id="nome" name="nome"
            value="{{ ricambio['nome'] }}" required>
 
-    <!-- CODICE -->
+    <!-- =============================== -->
+    <!-- PREFISSO CODICE                 -->
+    <!-- =============================== -->
+    <label for="prefisso">Prefisso (opzionale):</label>
+    <select id="prefisso" name="prefisso">
+        <option value="">Nessuno</option>
+
+        <option value="BH" {% if ricambio['prefisso'] == 'BH' %}selected{% endif %}>BH</option>
+        <option value="DR" {% if ricambio['prefisso'] == 'DR' %}selected{% endif %}>DR</option>
+        <option value="MM" {% if ricambio['prefisso'] == 'MM' %}selected{% endif %}>MM</option>
+        <option value="COF" {% if ricambio['prefisso'] == 'COF' %}selected{% endif %}>COF</option>
+        <option value="XEN" {% if ricambio['prefisso'] == 'XEN' %}selected{% endif %}>XEN</option>
+        <option value="MIC" {% if ricambio['prefisso'] == 'MIC' %}selected{% endif %}>MIC</option>
+        <option value="JAP" {% if ricambio['prefisso'] == 'JAP' %}selected{% endif %}>JAP</option>
+        <option value="UFI" {% if ricambio['prefisso'] == 'UFI' %}selected{% endif %}>UFI</option>
+    </select>
+
+    <!-- =============================== -->
+    <!-- CODICE                          -->
+    <!-- =============================== -->
     <label for="codice">Codice (unico):</label>
     <input type="text" id="codice" name="codice"
            value="{{ ricambio['codice'] }}" required>
 
-    <!-- QUANTITÀ -->
+    <!-- =============================== -->
+    <!-- QUANTITÀ                        -->
+    <!-- =============================== -->
     <label for="quantita">Quantità:</label>
     <input type="number" id="quantita" name="quantita"
            value="{{ ricambio['quantita'] }}" min="0" required>
 
-    <!-- ============================= -->
-    <!-- 🔁 RICAMBIO SOSTITUTO         -->
-    <!-- ============================= -->
-
-    <h3 style="margin-top:20px;">🔁 Ricambio Sostituente (opzionale)</h3>
+    <!-- =============================== -->
+    <!-- 🔁 RICAMBIO SOSTITUENTE         -->
+    <!-- =============================== -->
+    <h3 style="margin-top:25px;">🔁 Ricambio Sostituente (opzionale)</h3>
 
     <label for="sost_codice_select">Seleziona ricambio sostituente:</label>
     <select id="sost_codice_select" name="sost_codice_select">
@@ -55,15 +77,22 @@
         Scegli il ricambio sostituente dall’elenco. Nessun inserimento manuale è richiesto.
     </small>
 
-    <!-- PASSWORD -->
-    <label for="password">🔑 Inserisci la tua password per confermare:</label>
+    <!-- =============================== -->
+    <!-- PASSWORD                        -->
+    <!-- =============================== -->
+    <label for="password" style="margin-top:20px;">
+        🔑 Inserisci la tua password per confermare:
+    </label>
     <input type="password" id="password" name="password"
            placeholder="Password" required>
 
+    <!-- =============================== -->
+    <!-- SALVA                           -->
+    <!-- =============================== -->
     <button type="submit" class="button">💾 Salva modifiche</button>
 </form>
 
-<div style="text-align:center; margin-top:20px;">
+<div style="text-align:center; margin-top:25px;">
   <a class="button" href="/ricambi">🔙 Torna ai ricambi</a>
 </div>
 

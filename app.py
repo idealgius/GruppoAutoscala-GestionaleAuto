@@ -906,6 +906,11 @@ def modifica_ricambio(id):
         codice = request.form.get('codice')
         quantita = request.form.get('quantita')
 
+        # ✅ PREFISSO (STESSA LOGICA DI INSERIMENTO)
+        prefisso = request.form.get('prefisso', '').upper()
+        if prefisso and not codice.upper().startswith(prefisso):
+            codice = f"{prefisso} {codice.strip()}"
+
         # Sostituente scelto dal menu (UNICA MODALITÀ)
         sostitutivo = request.form.get('sost_codice_select')
         if sostitutivo == "":
