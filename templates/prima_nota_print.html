@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Prima Nota – Stampa</title>
+
+<style>
+@page { size: A4; margin: 18mm; }
+
+body {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: #000;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 18px;
+    letter-spacing: 1px;
+}
+
+.header .sub {
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #000;
+    padding: 6px;
+}
+
+th {
+    background: #f0f0f0;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+td {
+    text-align: right;
+}
+
+th.desc, td.desc {
+    text-align: left;
+    width: 40%;
+}
+
+tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.totali {
+    margin-top: 20px;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+}
+
+.totali td {
+    padding: 4px;
+}
+
+.totali .label {
+    text-align: left;
+}
+
+.totali .value {
+    text-align: right;
+    font-weight: bold;
+}
+
+.footer {
+    margin-top: 30px;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.footer .firma {
+    border-top: 1px solid #000;
+    width: 200px;
+    text-align: center;
+    padding-top: 4px;
+}
+
+.no-print {
+    margin-top: 20px;
+    text-align: center;
+}
+
+@media print {
+    .no-print { display: none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>PRIMA NOTA GIORNALIERA</h1>
+    <div class="sub">
+        {{ data_stampa
+           | replace("Monday","Lunedì")
+           | replace("Tuesday","Martedì")
+           | replace("Wednesday","Mercoledì")
+           | replace("Thursday","Giovedì")
+           | replace("Friday","Venerdì")
+           | replace("Saturday","Sabato")
+           | replace("Sunday","Domenica")
+        }}
+    </div>
+</div>
+
+<table>
+<thead>
+<tr>
+    <th>Data</th>
+    <th class="desc">Descrizione</th>
+    <th>Cassa</th>
+    <th>Banca / POS</th>
+    <th>Saldo Cassa</th>
+    <th>Totale Progressivo</th>
+</tr>
+</thead>
+<tbody>
+
+{% set ns = namespace(
+    saldo_cassa=0,
+    totale_generale=0
+) %}
+
+{% for r in movimenti %}
+    {% set cassa = r.cassa | float %}
+    {% set banca = r.banca | float %}
+    {% set ns.saldo_cassa = ns.saldo_cassa + cassa %}
+    {% set ns.totale_generale = ns.totale_generale + cassa + banca %}
+
+<tr>
+    <td>{{ r.data_it }}</td>
+    <td class="desc">{{ r.descrizione }}</td>
+    <td>{{ "%.2f"|format(cassa) }}</td>
+    <td>{{ "%.2f"|format(banca) }}</td>
+    <td>{{ "%.2f"|format(ns.saldo_cassa) }}</td>
+    <td>{{ "%.2f"|format(ns.totale_generale) }}</td>
+</tr>
+{% endfor %}
+
+</tbody>
+</table>
+
+<div class="totali">
+    <table>
+        <tr>
+            <td class="label">Saldo Cassa Finale</td>
+            <td class="value">{{ "%.2f"|format(ns.saldo_cassa) }} €</td>
+        </tr>
+        <tr>
+            <td class="label">Totale Generale</td>
+            <td class="value">{{ "%.2f"|format(ns.totale_generale) }} €</td>
+        </tr>
+    </table>
+</div>
+
+<div class="footer">
+    <div>Documento generato automaticamente</div>
+    <div class="firma">Firma</div>
+</div>
+
+<div class="no-print">
+    <button onclick="window.print()">🖨️ Stampa</button>
+</div>
+
+</body>
+</html>

@@ -2540,7 +2540,301 @@ def elimina_magazzino(id):
 
     flash("Ricambio eliminato.")
     return redirect(url_for("giacenza_magazzino"))
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+
+# =========================================================
+# 🧾 PRIMA NOTA – GESTIONE COMPLETA + STORICO (CORRETTA)
+# =========================================================
+
+# ---------------------------------------
+# 📄 PAGINA PRIMA NOTA
+# ---------------------------------------
+@app.route("/prima_nota")
+def prima_nota():
+    if "username" not in session:
+        abort(401)
+    return render_template("prima_nota.html")
+
+# ---------------------------------------
+# 📋 LETTURA MOVIMENTI (PER DATA)
+# ---------------------------------------
+@app.route("/prima_nota/list")
+def prima_nota_list():
+    if "username" not in session:
+        return jsonify([])
+
+    data_param = request.args.get("data")
+    data_filtro = (
+        datetime.strptime(data_param, "%Y-%m-%d").date()
+        if data_param else now_ita().date()
+    )
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT *
+        FROM prima_nota
+        WHERE username = %s
+          AND data::date = %s
+        ORDER BY created_at ASC
+    """, (session["username"], data_filtro))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
+# ---------------------------------------
+# ➕ AGGIUNTA MOVIMENTO
+# ---------------------------------------
+@app.route("/prima_nota/add", methods=["POST"])
+def prima_nota_add():
+    if "username" not in session:
+        return jsonify({"success": False}), 401
+
+    p = request.get_json()
+
+    data_operazione = datetime.strptime(p["data"], "%Y-%m-%d").date()
+    descrizione = p.get("descrizione", "").strip()
+    cassa = float(p.get("cassa") or 0)
+    banca = float(p.get("banca") or 0)
+    note = p.get("note", "")
+
+    if not descrizione:
+        return jsonify({"success": False, "error": "Descrizione obbligatoria"}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()   # ⬅️ TORNIAMO QUI
+
+    cur.execute("""
+        INSERT INTO prima_nota (
+            data, descrizione, cassa, banca,
+            saldo_cassa, note, username, created_at, chiusa
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,FALSE)
+    """, (
+        data_operazione,
+        descrizione,
+        cassa,
+        banca,
+        cassa,
+        note,
+        session["username"],
+        datetime.now()
+    ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"success": True})
+
+# ---------------------------------------
+# ❌ ELIMINA MOVIMENTO
+# ---------------------------------------
+@app.route("/prima_nota/delete/<id>", methods=["POST"])
+def prima_nota_delete(id):
+    if "username" not in session:
+        return jsonify({"success": False}), 401
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM prima_nota
+        WHERE id = %s
+          AND username = %s
+    """, (id, session["username"]))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+# ---------------------------------------
+# 🔒 CHIUSURA GIORNATA
+# ---------------------------------------
+@app.route("/prima_nota/chiudi", methods=["POST"])
+def prima_nota_chiudi():
+    if "username" not in session:
+        return jsonify({"success": False}), 401
+
+    today = now_ita().date()
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT
+            COALESCE(MAX(saldo_cassa),0) AS saldo_finale,
+            COALESCE(SUM(cassa + banca),0) AS totale
+        FROM prima_nota
+        WHERE username = %s
+          AND data = %s
+    """, (session["username"], today))
+
+    r = cur.fetchone()
+    saldo_finale = r["saldo_finale"]
+    totale = r["totale"]
+
+    cur.execute("""
+        SELECT saldo_finale
+        FROM prima_nota_storico
+        WHERE username = %s
+        ORDER BY data DESC
+        LIMIT 1
+    """, (session["username"],))
+
+    prev = cur.fetchone()
+    saldo_iniziale = prev["saldo_finale"] if prev else 0
+
+    cur.execute("""
+        INSERT INTO prima_nota_storico (
+            id, username, data,
+            saldo_iniziale, saldo_finale,
+            totale, chiusa
+        )
+        VALUES (%s,%s,%s,%s,%s,%s,TRUE)
+        ON CONFLICT (username, data)
+        DO UPDATE SET
+            saldo_finale = EXCLUDED.saldo_finale,
+            totale = EXCLUDED.totale,
+            chiusa = TRUE
+    """, (
+        str(uuid.uuid4()),
+        session["username"],
+        today,
+        saldo_iniziale,
+        saldo_finale,
+        totale
+    ))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"success": True})
+
+
+# =========================================================
+# 📅 STORICO PRIMA NOTA
+# =========================================================
+
+@app.route("/prima_nota/storico")
+def prima_nota_storico():
+    if "username" not in session:
+        return redirect(url_for("scelta_login"))
+    return render_template("prima_nota_storico.html")
+
+
+@app.route("/prima_nota/storico/list")
+def prima_nota_storico_list():
+    if "username" not in session:
+        return jsonify([])
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT data, saldo_iniziale, saldo_finale, totale
+        FROM prima_nota_storico
+        WHERE username = %s
+          AND chiusa = TRUE
+        ORDER BY data DESC
+    """, (session["username"],))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
+
+@app.route("/prima_nota/storico/elimina/<data>", methods=["POST"])
+def prima_nota_storico_elimina(data):
+    if "username" not in session:
+        return jsonify({"success": False}), 401
+
+    data_filtro = datetime.strptime(data, "%Y-%m-%d").date()
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM prima_nota_storico
+        WHERE username = %s
+          AND data = %s
+    """, (session["username"], data_filtro))
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({"success": True})
+
+# ---------------------------------------
+# 🖨️ STAMPA PRIMA NOTA GIORNALIERA
+# ---------------------------------------
+@app.route("/prima_nota/stampa")
+def prima_nota_stampa():
+    if "username" not in session:
+        return redirect(url_for("scelta_login"))
+
+    data_param = request.args.get("data")
+    if not data_param:
+        return "Data mancante", 400
+
+    data_filtro = datetime.strptime(data_param, "%Y-%m-%d").date()
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+
+    cur.execute("""
+        SELECT
+            data,
+            descrizione,
+            cassa,
+            banca
+        FROM prima_nota
+        WHERE username = %s
+          AND data = %s
+        ORDER BY created_at ASC
+    """, (session["username"], data_filtro))
+
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    # ---- preparazione dati per la stampa ----
+    movimenti = []
+    saldo_cassa = 0
+
+    for r in rows:
+        cassa = r["cassa"] or 0
+        banca = r["banca"] or 0
+        saldo_cassa += cassa
+
+        movimenti.append({
+            "data_it": r["data"].strftime("%d/%m/%Y"),
+            "descrizione": r["descrizione"],
+            "cassa": cassa,
+            "banca": banca,
+            "saldo_cassa": saldo_cassa
+        })
+
+    # data italiana estesa (Lunedì 19/01/2026)
+    data_stampa = data_filtro.strftime("%A %d/%m/%Y")
+    data_stampa = data_stampa.capitalize()
+
+    return render_template(
+        "prima_nota_print.html",
+        movimenti=movimenti,
+        data_stampa=data_stampa
+    )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 # =====================================
 # AVVIO SERVER
 # =====================================

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Storico Prima Nota{% endblock %}
+
+{% block content %}
+
+<h1>📅 Storico Prima Nota</h1>
+
+<p style="margin-bottom:20px; color:#555;">
+    Qui trovi tutte le <strong>giornate chiuse</strong>.  
+    Puoi visualizzarle, stamparle o eliminarle definitivamente.
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Saldo iniziale</th>
+            <th>Saldo finale</th>
+            <th>Totale giornata</th>
+            <th>Azioni</th>
+        </tr>
+    </thead>
+    <tbody id="tabella-storico">
+        <!-- popolata via JS -->
+    </tbody>
+</table>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+    const tbody = document.getElementById("tabella-storico");
+
+    function eur(v){
+        return (parseFloat(v) || 0).toFixed(2) + " €";
+    }
+
+    function formatDataIt(dataStr){
+        const d = new Date(dataStr);
+        const giorno = d.toLocaleDateString("it-IT", { weekday: "long" });
+        const data = d.toLocaleDateString("it-IT");
+        return giorno.charAt(0).toUpperCase() + giorno.slice(1) + " " + data;
+    }
+
+    async function caricaStorico(){
+        tbody.innerHTML = `<tr><td colspan="5">Caricamento...</td></tr>`;
+
+        const res = await fetch("/prima_nota/storico/list");
+        const rows = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5">Nessuna giornata chiusa</td></tr>`;
+            return;
+        }
+
+        rows.forEach(r => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${formatDataIt(r.data)}</td>
+                <td>${eur(r.saldo_iniziale)}</td>
+                <td>${eur(r.saldo_finale)}</td>
+                <td>${eur(r.totale)}</td>
+                <td style="white-space:nowrap;">
+                    <a href="/prima_nota?data=${r.data}">
+                        <button>👁️ Apri</button>
+                    </a>
+                    <a href="/prima_nota/stampa?data=${r.data}" target="_blank">
+                        <button>🖨️ Stampa</button>
+                    </a>
+                    <button class="del">🗑️ Elimina</button>
+                </td>
+            `;
+
+            tr.querySelector(".del").onclick = async () => {
+                if (!confirm("Eliminare definitivamente la giornata e TUTTI i movimenti?"))
+                    return;
+
+                const res = await fetch(
+                    `/prima_nota/storico/elimina/${r.data}`,
+                    { method: "POST" }
+                );
+
+                const out = await res.json();
+
+                if (out.success) {
+                    caricaStorico();
+                } else {
+                    alert("Errore eliminazione giornata");
+                }
+            };
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    caricaStorico();
+});
+</script>
+
+{% endblock %}

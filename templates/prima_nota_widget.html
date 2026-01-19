@@ -1,0 +1,36 @@
+<div id="widget-prima-nota" title="Prima Nota">📝</div>
+
+<style>
+#widget-prima-nota {
+    position: fixed;
+    bottom: 25px;
+    left: 25px;
+    width: 65px;
+    height: 65px;
+    background-color: #7CDB9B;
+    border-radius: 12px;
+    font-size: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 3000; /* più alto di tutto */
+    transition: transform 0.2s, background-color 0.3s;
+}
+#widget-prima-nota:hover {
+    transform: scale(1.1);
+    background-color: #6BCF8E;
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("widget-prima-nota");
+    if (btn) {
+        btn.addEventListener("click", function () {
+            window.location.href = "{{ url_for('prima_nota') }}";
+        });
+    }
+});
+</script>
