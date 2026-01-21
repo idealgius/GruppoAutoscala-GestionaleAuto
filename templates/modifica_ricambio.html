@@ -32,6 +32,7 @@
     <select id="prefisso" name="prefisso">
         <option value="">Nessuno</option>
 
+        <option value="AVS" {% if ricambio['prefisso'] == 'AVS' %}selected{% endif %}>AVS</option>
         <option value="BH" {% if ricambio['prefisso'] == 'BH' %}selected{% endif %}>BH</option>
         <option value="DR" {% if ricambio['prefisso'] == 'DR' %}selected{% endif %}>DR</option>
         <option value="MM" {% if ricambio['prefisso'] == 'MM' %}selected{% endif %}>MM</option>

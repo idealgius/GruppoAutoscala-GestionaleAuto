@@ -23,6 +23,7 @@
     <select id="prefisso" name="prefisso">
         <option value="">Nessuno</option>
 
+        <option value="AVS"  {% if request.form.get('prefisso') == 'AVS' %}selected{% endif %}>AVS</option>
         <option value="BH"  {% if request.form.get('prefisso') == 'BH' %}selected{% endif %}>BH</option>
         <option value="DR"  {% if request.form.get('prefisso') == 'DR' %}selected{% endif %}>DR</option>
         <option value="MM"  {% if request.form.get('prefisso') == 'MM' %}selected{% endif %}>MM</option>
