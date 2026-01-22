@@ -428,18 +428,39 @@ def inserisci_cliente():
 @app.route('/salva_cliente', methods=['POST'])
 @login_required
 def salva_cliente():
+
+    cellulare = request.form.get('cellulare', '').strip()
+    telefono_alt = request.form.get('telefono_alt', '').strip()
+
+    # Controllo numerico
+    if cellulare and not cellulare.isdigit():
+        flash("Il campo Cellulare deve contenere solo numeri")
+        return redirect('/inserisci_cliente')
+
+    if telefono_alt and not telefono_alt.isdigit():
+        flash("Il campo Telefono fisso / Cellulare alternativo deve contenere solo numeri")
+        return redirect('/inserisci_cliente')
+
     data = (
-        request.form['nome'], request.form['cognome'], request.form['via'],
-        request.form['provincia'], request.form['comune'], request.form.get('data_nascita') or None,
-        request.form.get('codice_fiscale') or None, request.form.get('telefono'),
-        request.form.get('email') or None, session['user_id']
+        request.form['nome'],
+        request.form['cognome'],
+        request.form['via'],
+        request.form['provincia'],
+        request.form['comune'],
+        request.form.get('codice_fiscale') or None,
+        cellulare,
+        telefono_alt or None,
+        request.form.get('email') or None,
+        session['user_id']
     )
+
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO clienti
-            (nome, cognome, via, provincia, comune, data_nascita, codice_fiscale, telefono, email, utente_id)
+            (nome, cognome, via, provincia, comune,
+             codice_fiscale, cellulare, telefono_alt, email, utente_id)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, data)
@@ -447,10 +468,17 @@ def salva_cliente():
         conn.commit()
     finally:
         conn.close()
+
     try:
-        log_storico(session['user_id'], f"Inserito cliente {new_id}: {data[0]} {data[1]}", "clienti", new_id)
+        log_storico(
+            session['user_id'],
+            f"Inserito cliente {new_id}: {data[0]} {data[1]}",
+            "clienti",
+            new_id
+        )
     except Exception:
         pass
+
     return redirect('/clienti')
 
 # =====================================

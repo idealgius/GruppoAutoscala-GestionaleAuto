@@ -6,6 +6,7 @@
 <h1>➕ Inserisci un nuovo cliente</h1>
 
 <form action="/salva_cliente" method="POST" style="max-width:600px; margin:0 auto;">
+    
     <label for="nome">Nome:</label>
     <input type="text" name="nome" required value="{{ request.form.get('nome') or '' }}">
 
@@ -15,8 +16,7 @@
     <label for="via">Via:</label>
     <input type="text" name="via" required value="{{ request.form.get('via') or '' }}">
 
-    <label for="data_nascita">Data di nascita:</label>
-    <input type="date" name="data_nascita" value="{{ request.form.get('data_nascita') or '' }}">
+    <!-- DATA DI NASCITA RIMOSSA -->
 
     <label for="provincia">Provincia:</label>
     <input type="text" name="provincia" required value="{{ request.form.get('provincia') or '' }}">
@@ -27,8 +27,23 @@
     <label for="codice_fiscale">Codice fiscale:</label>
     <input type="text" name="codice_fiscale" value="{{ request.form.get('codice_fiscale') or '' }}">
 
-    <label for="telefono">Telefono:</label>
-    <input type="text" name="telefono" value="{{ request.form.get('telefono') or '' }}">
+    <label for="cellulare">Cellulare:</label>
+    <input 
+        type="tel"
+        name="cellulare"
+        pattern="[0-9]*"
+        inputmode="numeric"
+        value="{{ request.form.get('cellulare') or '' }}"
+    >
+
+    <label for="telefono_alt">Telefono fisso / Cellulare alternativo:</label>
+    <input 
+        type="tel"
+        name="telefono_alt"
+        pattern="[0-9]*"
+        inputmode="numeric"
+        value="{{ request.form.get('telefono_alt') or '' }}"
+    >
 
     <label for="email">Email:</label>
     <input type="email" name="email" value="{{ request.form.get('email') or '' }}">
