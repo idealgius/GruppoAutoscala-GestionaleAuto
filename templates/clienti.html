@@ -19,9 +19,9 @@
             <th>Via</th>
             <th>Comune</th>
             <th>Provincia</th>
-            <th>Data di nascita</th>
             <th>Codice fiscale</th>
-            <th>Telefono</th>
+            <th>Cellulare</th>
+            <th>Telefono alternativo</th>
             <th>Email</th>
             <th>Azioni</th>
         </tr>
@@ -30,19 +30,19 @@
         {% if clienti %}
             {% for cliente in clienti %}
             <tr>
-                <td>{{ cliente[0] or '' }}</td>
-                <td>{{ cliente[1] or '' }}</td>
-                <td>{{ cliente[2] or '' }}</td>
-                <td>{{ cliente[3] or '' }}</td> <!-- Via -->
-                <td>{{ cliente[4] or '' }}</td> <!-- Comune -->
-                <td>{{ cliente[5] or '' }}</td> <!-- Provincia -->
-                <td>{{ cliente[6] or '' }}</td> <!-- Data di nascita -->
-                <td>{{ cliente[7] or '' }}</td> <!-- Codice fiscale -->
-                <td>{{ cliente[8] or '' }}</td> <!-- Telefono -->
-                <td>{{ cliente[9] or '' }}</td> <!-- Email -->
+                <td>{{ cliente['id'] or '' }}</td>
+                <td>{{ cliente['nome'] or '' }}</td>
+                <td>{{ cliente['cognome'] or '' }}</td>
+                <td>{{ cliente['via'] or '' }}</td>
+                <td>{{ cliente['comune'] or '' }}</td>
+                <td>{{ cliente['provincia'] or '' }}</td>
+                <td>{{ cliente['codice_fiscale'] or '' }}</td>
+                <td>{{ cliente['cellulare'] or '' }}</td>
+                <td>{{ cliente['telefono_alt'] or '' }}</td>
+                <td>{{ cliente['email'] or '' }}</td>
                 <td class="action-buttons">
-                    <a href="/modifica_cliente/{{ cliente[0] }}" class="modifica">✏️ Modifica</a>
-                    <a href="/elimina_cliente/{{ cliente[0] }}" class="elimina"
+                    <a href="/modifica_cliente/{{ cliente['id'] }}" class="modifica">✏️ Modifica</a>
+                    <a href="/elimina_cliente/{{ cliente['id'] }}" class="elimina"
                        onclick="return confirm('Sei sicuro di voler eliminare questo cliente?');">🗑️ Elimina</a>
                 </td>
             </tr>
