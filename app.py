@@ -112,8 +112,16 @@ def lavorazioni_officina_query(user_id):
 # =====================================
 # UTILITY
 # =====================================
+import bcrypt  # aggiungi in cima al file, vicino agli altri import
+
 def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Genera un hash sicuro con bcrypt"""
+    hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    return hashed.decode('utf-8')  # salva come stringa leggibile nel DB
+
+def check_password(password: str, hashed: str) -> bool:
+    """Verifica se la password inserita corrisponde all'hash salvato"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 def status_to_color(stato: str) -> str:
     if not stato:
@@ -282,20 +290,11 @@ def login(ruolo):
 
         db_pw = user.get('password', '')
 
+        # --------------------------
+        # Verifica password con bcrypt
+        # --------------------------
         try:
-            if isinstance(db_pw, str) and db_pw == password:
-                pass
-            elif isinstance(db_pw, str) and len(db_pw) == 64:
-                if hash_password(password) == db_pw:
-                    conn = get_db_connection()
-                    cur = conn.cursor()
-                    cur.execute("UPDATE utenti SET password=%s WHERE id=%s", (password, user['id']))
-                    conn.commit()
-                    conn.close()
-                else:
-                    flash("Username o password non validi.")
-                    return render_template('login.html', ruolo=ruolo_input)
-            else:
+            if not db_pw or not check_password(password, db_pw):
                 flash("Username o password non validi.")
                 return render_template('login.html', ruolo=ruolo_input)
         except Exception:
@@ -303,6 +302,9 @@ def login(ruolo):
             flash("Si è verificato un errore durante il login.")
             return render_template('login.html', ruolo=ruolo_input)
 
+        # --------------------------
+        # Imposta sessione
+        # --------------------------
         user_role = user.get('ruolo', '').strip().lower()
         if not user_role:
             flash("Utente senza ruolo assegnato, contatta l'amministratore.")
@@ -318,7 +320,9 @@ def login(ruolo):
         except Exception:
             pass
 
-        # Gestione ruoli
+        # --------------------------
+        # Gestione redirect per ruolo
+        # --------------------------
         if user_role == 'officina':
             return redirect(url_for('home_officina'))
         elif user_role == 'accettazione':
@@ -329,12 +333,11 @@ def login(ruolo):
             flash("Ruolo non riconosciuto.")
             return redirect(url_for('scelta_login'))
 
-    # Se nessun ruolo selezionato
+    # Se GET o nessun ruolo selezionato
     if not ruolo_input:
         return redirect(url_for('scelta_login'))
     
     return render_template('login.html', ruolo=ruolo_input)
-
 
 @app.route('/logout')
 @login_required
@@ -479,6 +482,80 @@ def salva_cliente():
     except Exception:
         pass
 
+    return redirect('/clienti')
+@app.route('/modifica_cliente/<int:cliente_id>', methods=['GET'])
+@login_required
+def modifica_cliente(cliente_id):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cur.execute(
+            "SELECT * FROM clienti WHERE id=%s AND utente_id=%s",
+            (cliente_id, session['user_id'])
+        )
+        cliente = cur.fetchone()
+        if not cliente:
+            flash("Cliente non trovato o non autorizzato")
+            return redirect('/clienti')
+    finally:
+        conn.close()
+
+    return render_template('modifica_cliente.html', cliente=cliente)
+
+@app.route('/aggiorna_cliente/<int:cliente_id>', methods=['POST'])
+@login_required
+def aggiorna_cliente(cliente_id):
+    # Prendi i dati dal form
+    nome = request.form['nome'].strip()
+    cognome = request.form['cognome'].strip()
+    via = request.form['via'].strip()
+    provincia = request.form['provincia'].strip()
+    comune = request.form['comune'].strip()
+    codice_fiscale = request.form.get('codice_fiscale') or None
+    cellulare = request.form.get('cellulare', '').strip()
+    telefono_alt = request.form.get('telefono_alt', '').strip()
+    email = request.form.get('email') or None
+
+    # Controllo numerico
+    if cellulare and not cellulare.isdigit():
+        flash("Il campo Cellulare deve contenere solo numeri")
+        return redirect(f'/modifica_cliente/{cliente_id}')
+
+    if telefono_alt and not telefono_alt.isdigit():
+        flash("Il campo Telefono alternativo deve contenere solo numeri")
+        return redirect(f'/modifica_cliente/{cliente_id}')
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            UPDATE clienti
+            SET nome=%s, cognome=%s, via=%s, provincia=%s, comune=%s,
+                codice_fiscale=%s, cellulare=%s, telefono_alt=%s, email=%s
+            WHERE id=%s AND utente_id=%s
+        """, (nome, cognome, via, provincia, comune, codice_fiscale,
+              cellulare, telefono_alt, email, cliente_id, session['user_id']))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Cliente aggiornato correttamente")
+    return redirect('/clienti')
+
+@app.route('/elimina_cliente/<int:cliente_id>', methods=['GET'])
+@login_required
+def elimina_cliente(cliente_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        # Cancella solo se appartiene all'utente
+        cur.execute("DELETE FROM clienti WHERE id=%s AND utente_id=%s", 
+                    (cliente_id, session['user_id']))
+        conn.commit()
+    finally:
+        conn.close()
+
+    flash("Cliente eliminato correttamente")
     return redirect('/clienti')
 
 # =====================================

@@ -5,53 +5,97 @@
 {% block content %}
 <h1>👥 Lista Clienti Registrati</h1>
 
-<!-- Pulsante per inserire nuovo cliente -->
 <div style="margin-bottom:20px;">
     <a href="/inserisci_cliente" class="button">➕ Inserisci Nuovo Cliente</a>
 </div>
 
-<table>
+<div style="overflow-x:auto;">
+<table style="width:100%; border-collapse: collapse; table-layout: fixed; font-family: Arial, sans-serif; font-size:14px;">
     <thead>
-        <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Cognome</th>
-            <th>Via</th>
-            <th>Comune</th>
-            <th>Provincia</th>
-            <th>Codice fiscale</th>
-            <th>Cellulare</th>
-            <th>Telefono alternativo</th>
-            <th>Email</th>
-            <th>Azioni</th>
+        <tr style="background-color:#f2f2f2;">
+            <th style="width:40px; text-align:left; padding:8px;">ID</th>
+            <th style="width:100px; text-align:left; padding:8px;">Nome</th>
+            <th style="width:100px; text-align:left; padding:8px;">Cognome</th>
+            <th style="width:150px; text-align:left; padding:8px;">Via</th>
+            <th style="width:120px; text-align:left; padding:8px;">Comune</th>
+            <th style="width:80px; text-align:left; padding:8px;">Provincia</th>
+            <th style="width:130px; text-align:left; padding:8px;">Codice fiscale</th>
+            <th style="width:100px; text-align:left; padding:8px;">Cellulare</th>
+            <th style="width:120px; text-align:left; padding:8px;">Telefono alternativo</th>
+            <th style="width:180px; text-align:left; padding:8px; word-wrap: break-word;">Email</th>
+            <th style="width:140px; text-align:left; padding:8px; position: sticky; right:0;">Azioni</th>
         </tr>
     </thead>
     <tbody>
         {% if clienti %}
             {% for cliente in clienti %}
-            <tr>
-                <td>{{ cliente['id'] or '' }}</td>
-                <td>{{ cliente['nome'] or '' }}</td>
-                <td>{{ cliente['cognome'] or '' }}</td>
-                <td>{{ cliente['via'] or '' }}</td>
-                <td>{{ cliente['comune'] or '' }}</td>
-                <td>{{ cliente['provincia'] or '' }}</td>
-                <td>{{ cliente['codice_fiscale'] or '' }}</td>
-                <td>{{ cliente['cellulare'] or '' }}</td>
-                <td>{{ cliente['telefono_alt'] or '' }}</td>
-                <td>{{ cliente['email'] or '' }}</td>
-                <td class="action-buttons">
-                    <a href="/modifica_cliente/{{ cliente['id'] }}" class="modifica">✏️ Modifica</a>
-                    <a href="/elimina_cliente/{{ cliente['id'] }}" class="elimina"
-                       onclick="return confirm('Sei sicuro di voler eliminare questo cliente?');">🗑️ Elimina</a>
+            <tr style="background-color:{% if loop.index0 % 2 == 0 %}#ffffff{% else %}#f0f8ff{% endif %};">
+                <td style="padding:6px;">{{ cliente['id'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['nome'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['cognome'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['via'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['comune'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['provincia'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['codice_fiscale'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['cellulare'] or '' }}</td>
+                <td style="padding:6px;">{{ cliente['telefono_alt'] or '' }}</td>
+                <td style="padding:6px; word-wrap: break-word;">{{ cliente['email'] or '' }}</td>
+                <td style="white-space: nowrap; padding:6px; position: sticky; right:0; z-index:1;">
+                    <div style="display:flex; gap:4px;">
+                        <a href="/modifica_cliente/{{ cliente['id'] }}" class="btn-modifica" title="Modifica">✏️</a>
+                        <a href="/elimina_cliente/{{ cliente['id'] }}" class="btn-elimina" title="Elimina"
+                           onclick="return confirm('Sei sicuro di voler eliminare questo cliente?');">🗑️</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
         {% else %}
             <tr>
-                <td colspan="11" style="text-align:center;">Nessun cliente registrato.</td>
+                <td colspan="11" style="text-align:center; padding:10px;">Nessun cliente registrato.</td>
             </tr>
         {% endif %}
     </tbody>
 </table>
+</div>
+
+<style>
+    /* Hover righe */
+    table tbody tr:hover {
+        background-color: #cce5ff; /* blu chiaro coerente */
+    }
+
+    /* Bottone Modifica */
+    .btn-modifica {
+        display:inline-block;
+        background-color:#ff9900; /* arancione */
+        color:white;
+        padding:4px 8px;
+        border-radius:4px;
+        text-decoration:none;
+        font-weight:bold;
+    }
+    .btn-modifica:hover {
+        background-color:#e68a00;
+    }
+
+    /* Bottone Elimina */
+    .btn-elimina {
+        display:inline-block;
+        background-color:#dc3545; /* rosso */
+        color:white;
+        padding:4px 8px;
+        border-radius:4px;
+        text-decoration:none;
+        font-weight:bold;
+    }
+    .btn-elimina:hover {
+        background-color:#b02a37;
+    }
+
+    /* Assicura che la colonna sticky non sovrapponga mai righe sottostanti */
+    td[position="sticky"] div {
+        display:flex;
+        flex-wrap:nowrap;
+    }
+</style>
 {% endblock %}
