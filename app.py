@@ -737,16 +737,15 @@ def salva_modello():
         request.form.get('cilindrata'),
         request.form.get('kw'),
         request.form.get('carburante'),
-        request.form.get('codice_motore'),
-        session['user_id']
+        request.form.get('codice_motore')
     )
     conn = get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute("""
             INSERT INTO modelli
-            (marca, modello, versione, codice_versione, cilindrata, kw, carburante, codice_motore, utente_id)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            (marca, modello, versione, codice_versione, cilindrata, kw, carburante, codice_motore)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, data)
         new_id = cur.fetchone()[0]
@@ -759,13 +758,14 @@ def salva_modello():
         pass
     return redirect('/modelli')
 
+
 @app.route('/modifica_modello/<int:id>', methods=['GET'])
 @login_required
 def modifica_modello(id):
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT * FROM modelli WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+        cur.execute("SELECT * FROM modelli WHERE id=%s", (id,))
         modello = cur.fetchone()
     finally:
         conn.close()
@@ -773,6 +773,7 @@ def modifica_modello(id):
         return render_template('modifica_modello.html', modello=modello)
     flash("Modello non trovato.")
     return redirect('/modelli')
+
 
 @app.route('/aggiorna_modello/<int:id>', methods=['POST'])
 @login_required
@@ -786,7 +787,6 @@ def aggiorna_modello(id):
         request.form.get('kw'),
         request.form.get('carburante'),
         request.form.get('codice_motore'),
-        session['user_id'],
         id
     )
     conn = get_db_connection()
@@ -795,7 +795,7 @@ def aggiorna_modello(id):
         cur.execute("""
             UPDATE modelli
             SET marca=%s, modello=%s, versione=%s, codice_versione=%s,
-                cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s, utente_id=%s
+                cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s
             WHERE id=%s
         """, data)
         conn.commit()
@@ -807,15 +807,16 @@ def aggiorna_modello(id):
         pass
     return redirect('/modelli')
 
+
 @app.route('/elimina_modello/<int:id>')
 @login_required
 def elimina_modello(id):
     conn = get_db_connection()
     cur = conn.cursor()
     try:
-        cur.execute("SELECT marca, modello FROM modelli WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+        cur.execute("SELECT marca, modello FROM modelli WHERE id=%s", (id,))
         modello = cur.fetchone()
-        cur.execute("DELETE FROM modelli WHERE id=%s AND utente_id=%s", (id, session['user_id']))
+        cur.execute("DELETE FROM modelli WHERE id=%s", (id,))
         conn.commit()
     finally:
         conn.close()
