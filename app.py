@@ -656,12 +656,25 @@ def lista_modelli():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT DISTINCT marca FROM modelli WHERE utente_id=%s ORDER BY marca", (session['user_id'],))
+        # Marche GLOBALI (visibili a tutti)
+        cur.execute("""
+            SELECT DISTINCT marca
+            FROM modelli
+            ORDER BY marca
+        """)
         marche = [row['marca'] for row in cur.fetchall()]
-        cur.execute("SELECT * FROM modelli WHERE utente_id=%s ORDER BY marca, modello, versione", (session['user_id'],))
+
+        # Tutti i modelli GLOBALI
+        cur.execute("""
+            SELECT *
+            FROM modelli
+            ORDER BY marca, modello, versione
+        """)
         modelli_raw = cur.fetchall()
     finally:
         conn.close()
+
+    # Rimuove eventuali duplicati logici
     seen = set()
     modelli = []
     for m in modelli_raw:
@@ -669,6 +682,7 @@ def lista_modelli():
         if key not in seen:
             seen.add(key)
             modelli.append(m)
+
     return render_template('modelli.html', marche=marche, modelli=modelli)
 
 @app.route('/inserisci_modello', methods=['GET'])
