@@ -417,10 +417,23 @@ def lista_clienti():
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cur.execute("SELECT * FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+        # Se l'utente loggato è accettazione, mostra tutti i clienti degli utenti accettazione
+        if session.get('ruolo') == 'accettazione':
+            cur.execute("""
+                SELECT c.*
+                FROM clienti c
+                JOIN utenti u ON c.utente_id = u.id
+                WHERE u.ruolo = 'accettazione'
+                ORDER BY c.id
+            """)
+        else:
+            # Per altri ruoli, mostra solo i clienti propri
+            cur.execute("SELECT * FROM clienti WHERE utente_id=%s ORDER BY id", (session['user_id'],))
+        
         clienti = cur.fetchall()
     finally:
         conn.close()
+    
     return render_template('clienti.html', clienti=clienti)
 
 @app.route('/inserisci_cliente', methods=['GET'])
