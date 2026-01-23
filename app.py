@@ -1,6 +1,13 @@
 from flask import (
-    Flask, render_template, request, redirect,
-    url_for, session, flash, jsonify
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    jsonify,
+    abort
 )
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -11,12 +18,55 @@ import json
 import os
 import pytz
 import uuid
+import requests
+from dotenv import load_dotenv
 
 # =====================================
 # DOTENV - CARICA IL FILE .env PRIMA DI TUTTO
 # =====================================
-from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), ".env"))
+
+# =====================================
+# FLASK APP
+# =====================================
+app = Flask(__name__)
+
+# =====================================
+# ORA ITALIANA – FUNZIONE DEFINITIVA
+# =====================================
+def now_ita():
+    return datetime.now(pytz.timezone("Europe/Rome"))
+
+# =====================================
+# HELPERS UTENTE / LAVORAZIONI / STORICO
+# =====================================
+def get_nome_reale(user_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT username FROM utenti WHERE id = %s", (user_id,))
+        row = cur.fetchone()
+    finally:
+        conn.close()
+    return row[0] if row else None
+
+# =====================================
+# CONTROLLO PERMESSO SU MODELLI
+# =====================================
+# =====================================
+# CONTROLLO PERMESSO SU MODELLI
+# =====================================
+def check_permesso_modelli():
+    """Blocca l'accesso se l'utente non è tra quelli autorizzati"""
+    utenti_autorizzati = [
+        "G.AS_Giuseppe.Palladino",
+        "G.AS_Gianluca.Scala"
+    ]
+    username = get_nome_reale(session['user_id'])  # prende l'username reale dell'utente loggato
+    if username not in utenti_autorizzati:
+        flash("Accesso negato: non hai i permessi per modificare i modelli.")
+        return redirect(url_for('lista_modelli'))  # ritorna alla lista modelli
+    return None  # tutto ok
 
 # =====================================
 # SUPABASE STORAGE VIA REST API (NO LIBRERIA BUGGATA)
@@ -36,6 +86,9 @@ SUPABASE_STORAGE_URL = f"{SUPABASE_URL}/storage/v1/object"
 # FLASK APP
 # =====================================
 app = Flask(__name__)
+
+# Imposta SECRET_KEY: usa la variabile d'ambiente se disponibile, altrimenti usa una chiave di default per locale
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'questa_e_una_chiave_di_default')
 
 # =====================================
 # ORA ITALIANA – FUNZIONE DEFINITIVA
@@ -589,43 +642,39 @@ def lista_vetture():
 @app.route('/inserisci_vettura', methods=['GET'])
 @login_required
 def inserisci_vettura():
-    # Lista marche fisse per il menù a tendina
     marche = [
-        "ALFA ROMEO", "AUDI", "BMW", "BYD", "CHEVROLET", "CHRYSLER",
-        "CITROEN", "CUPRA", "DACIA", "DAEWOO", "DAIHATSU", "DODGE",
-        "DR", "EVO", "FIAT", "FORD", "HONDA", "HYUNDAI", "ICH-X",
-        "INFINITI", "ISUZU", "IVECO", "JAGUAR", "JEEP", "KIA", "LADA",
-        "LANCIA", "LAND ROVER", "LEXUS", "LYNK&CO", "MAHINDRA", "MAN", "MASERATI",
-        "MAXUS", "MAZDA", "MERCEDES", "MG", "MINI", "MITSUBISHI",
-        "NISSAN", "OPEL", "PEUGEOT", "PIAGGIO", "POLESTAR", "PORSCHE",
-        "RENAULT", "ROVER", "SAAB", "SEAT", "SKODA", "SMART",
-        "SPORTEQUIPE", "SSANGYONG", "SUBARU", "SUZUKI", "TATA",
-        "TESLA", "TOYOTA", "VOLKSWAGEN", "VOLVO"
+        "ALFA ROMEO","AUDI","BMW","BYD","CHEVROLET","CHRYSLER",
+        "CITROEN","CUPRA","DACIA","DAEWOO","DAIHATSU","DODGE",
+        "DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X",
+        "INFINITI","ISUZU","IVECO","JAGUAR","JEEP","KIA","LADA",
+        "LANCIA","LAND ROVER","LEXUS","LYNK&CO","MAHINDRA","MAN",
+        "MASERATI","MAXUS","MAZDA","MERCEDES","MG","MINI",
+        "MITSUBISHI","NISSAN","OPEL","PEUGEOT","PIAGGIO",
+        "POLESTAR","PORSCHE","RENAULT","ROVER","SAAB","SEAT",
+        "SKODA","SMART","SPORTEQUIPE","SSANGYONG","SUBARU",
+        "SUZUKI","TATA","TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
     ]
 
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        # Legge i clienti dell'utente
+        # Clienti: PER UTENTE
         cur.execute(
             "SELECT id, nome, cognome FROM clienti WHERE utente_id=%s ORDER BY id",
             (session['user_id'],)
         )
         clienti = cur.fetchall()
 
-        # Legge tutti i modelli dell'utente
+        # Modelli: GLOBALI
         cur.execute(
-            "SELECT * FROM modelli WHERE utente_id=%s ORDER BY marca, modello, versione",
-            (session['user_id'],)
+            "SELECT * FROM modelli ORDER BY marca, modello, versione"
         )
         modelli_raw = cur.fetchall()
     finally:
         conn.close()
 
-    # Converte i modelli in JSON per JavaScript
     modelli_json = json.dumps(modelli_raw)
 
-    # Passa marche, clienti e modelli al template
     return render_template(
         'inserisci_vettura.html',
         clienti=clienti,
@@ -670,19 +719,11 @@ def lista_modelli():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     try:
         # Marche GLOBALI (visibili a tutti)
-        cur.execute("""
-            SELECT DISTINCT marca
-            FROM modelli
-            ORDER BY marca
-        """)
+        cur.execute("SELECT DISTINCT marca FROM modelli ORDER BY marca")
         marche = [row['marca'] for row in cur.fetchall()]
 
         # Tutti i modelli GLOBALI
-        cur.execute("""
-            SELECT *
-            FROM modelli
-            ORDER BY marca, modello, versione
-        """)
+        cur.execute("SELECT * FROM modelli ORDER BY marca, modello, versione")
         modelli_raw = cur.fetchall()
     finally:
         conn.close()
@@ -701,15 +742,16 @@ def lista_modelli():
 @app.route('/inserisci_modello', methods=['GET'])
 @login_required
 def inserisci_modello():
+    permesso = check_permesso_modelli()
+    if permesso:
+        return permesso
+
     conn = get_db_connection()
     cur = conn.cursor()
-
-    # Preleva marchi già presenti nel DB
     cur.execute("SELECT DISTINCT marca FROM modelli ORDER BY marca")
     marche_db = [row[0] for row in cur.fetchall()]
     conn.close()
 
-    # Lista completa dei marchi possibili
     marche_totali = [
         "ALFA ROMEO","AUDI","BMW","CHEVROLET","CHRYSLER","CITROEN","CUPRA","DACIA",
         "DAEWOO","DAIHATSU","DODGE","DR","EVO","FIAT","FORD","HONDA","HYUNDAI","ICH-X",
@@ -720,15 +762,16 @@ def inserisci_modello():
         "TESLA","TOYOTA","VOLKSWAGEN","VOLVO"
     ]
 
-    # Combina la lista del DB con quella completa e rimuove duplicati
     marchi = sorted(set(marche_db + marche_totali))
-
     return render_template('inserisci_modello.html', marchi=marchi)
-
 
 @app.route('/salva_modello', methods=['POST'])
 @login_required
 def salva_modello():
+    permesso = check_permesso_modelli()
+    if permesso:
+        return permesso
+
     data = (
         request.form['marca'],
         request.form['modello'],
@@ -739,45 +782,48 @@ def salva_modello():
         request.form.get('carburante'),
         request.form.get('codice_motore')
     )
+
     conn = get_db_connection()
     cur = conn.cursor()
-    try:
-        cur.execute("""
-            INSERT INTO modelli
-            (marca, modello, versione, codice_versione, cilindrata, kw, carburante, codice_motore)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-            RETURNING id
-        """, data)
-        new_id = cur.fetchone()[0]
-        conn.commit()
-    finally:
-        conn.close()
-    try:
-        log_storico(session['user_id'], f"Inserito modello {new_id}: {data[0]} {data[1]}", "modelli", new_id)
-    except Exception:
-        pass
-    return redirect('/modelli')
+    cur.execute("""
+        INSERT INTO modelli
+        (marca, modello, versione, codice_versione, cilindrata, kw, carburante, codice_motore)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+        RETURNING id
+    """, data)
+    new_id = cur.fetchone()[0]
+    conn.commit()
+    conn.close()
 
+    log_storico(session['user_id'], f"Inserito modello {new_id}", "modelli", new_id)
+    return redirect('/modelli')
 
 @app.route('/modifica_modello/<int:id>', methods=['GET'])
 @login_required
 def modifica_modello(id):
+    permesso = check_permesso_modelli()
+    if permesso:
+        return permesso
+
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
-    try:
-        cur.execute("SELECT * FROM modelli WHERE id=%s", (id,))
-        modello = cur.fetchone()
-    finally:
-        conn.close()
-    if modello:
-        return render_template('modifica_modello.html', modello=modello)
-    flash("Modello non trovato.")
-    return redirect('/modelli')
+    cur.execute("SELECT * FROM modelli WHERE id=%s", (id,))
+    modello = cur.fetchone()
+    conn.close()
 
+    if not modello:
+        flash("Modello non trovato")
+        return redirect('/modelli')
+
+    return render_template('modifica_modello.html', modello=modello)
 
 @app.route('/aggiorna_modello/<int:id>', methods=['POST'])
 @login_required
 def aggiorna_modello(id):
+    permesso = check_permesso_modelli()
+    if permesso:
+        return permesso
+
     data = (
         request.form['marca'],
         request.form['modello'],
@@ -789,42 +835,35 @@ def aggiorna_modello(id):
         request.form.get('codice_motore'),
         id
     )
+
     conn = get_db_connection()
     cur = conn.cursor()
-    try:
-        cur.execute("""
-            UPDATE modelli
-            SET marca=%s, modello=%s, versione=%s, codice_versione=%s,
-                cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s
-            WHERE id=%s
-        """, data)
-        conn.commit()
-    finally:
-        conn.close()
-    try:
-        log_storico(session['user_id'], f"Aggiornato modello {id}: {data[0]} {data[1]}", "modelli", id)
-    except Exception:
-        pass
-    return redirect('/modelli')
+    cur.execute("""
+        UPDATE modelli
+        SET marca=%s, modello=%s, versione=%s, codice_versione=%s,
+            cilindrata=%s, kw=%s, carburante=%s, codice_motore=%s
+        WHERE id=%s
+    """, data)
+    conn.commit()
+    conn.close()
 
+    log_storico(session['user_id'], f"Aggiornato modello {id}", "modelli", id)
+    return redirect('/modelli')
 
 @app.route('/elimina_modello/<int:id>')
 @login_required
 def elimina_modello(id):
+    permesso = check_permesso_modelli()
+    if permesso:
+        return permesso
+
     conn = get_db_connection()
     cur = conn.cursor()
-    try:
-        cur.execute("SELECT marca, modello FROM modelli WHERE id=%s", (id,))
-        modello = cur.fetchone()
-        cur.execute("DELETE FROM modelli WHERE id=%s", (id,))
-        conn.commit()
-    finally:
-        conn.close()
-    try:
-        nome_mod = f"{modello[0]} {modello[1]}" if modello else str(id)
-        log_storico(session['user_id'], f"Eliminato modello {id}: {nome_mod}", "modelli", id)
-    except Exception:
-        pass
+    cur.execute("DELETE FROM modelli WHERE id=%s", (id,))
+    conn.commit()
+    conn.close()
+
+    log_storico(session['user_id'], f"Eliminato modello {id}", "modelli", id)
     return redirect('/modelli')
 
 # =====================================
