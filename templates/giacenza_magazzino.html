@@ -244,13 +244,17 @@
                         ✏️
                     </button>
                 </td>
+                  <td>
+                    <form action="{{ url_for('elimina_magazzino', id=r.id) }}"
+                        method="POST"
+                        onsubmit="return confirm('Eliminare definitivamente questo ricambio?');"
+                         style="display:inline;">
 
-                <td>
-                    <a class="btn-elimina"
-                       onclick="return confirm('Eliminare definitivamente?')"
-                       href="{{ url_for('elimina_magazzino', id=r.id) }}">
-                       X
-                    </a>
+                        <button type="submit" class="btn-elimina">
+                         X
+                      </button>
+
+                    </form>
                 </td>
             </tr>
             {% endfor %}
