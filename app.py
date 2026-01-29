@@ -1918,8 +1918,9 @@ def home_officina_gomme():
         flash("Accesso negato: non hai i permessi per questa sezione.")
         return redirect(url_for('scelta_login'))
 
-    nome_reale = session.get('username', 'Utente')
-    return render_template("home_officina_gomme.html", nome_reale=nome_reale)
+    # Prende il nome utente dalla sessione e lo passa al template come "username"
+    username = session.get('username', 'Utente')
+    return render_template("home_officina_gomme.html", username=username)
 
 
 @app.route("/inserisci_gomme", methods=["GET", "POST"])
@@ -2108,6 +2109,121 @@ def elimina_gomma(id):
         flash("❌ Errore durante l'eliminazione.")
 
     return redirect(url_for("giacenza_gomme"))
+
+# ======================
+# ROUTE GOMME CLIENTI 
+# ======================
+
+@app.route('/inserisci_gommeclienti', methods=['GET', 'POST'])
+@login_required
+def inserisci_gommeclienti():
+    marche_clienti = [
+        "Avon", "Barum", "Bridgestone", "Continental",
+        "Davanti Tyres", "Fortune", "Goodyear", "Hankook",
+        "Kleber", "Kumho", "Ling Long", "Michelin",
+        "Nankang", "Ovation", "Pirelli"
+    ]
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cognome = request.form.get('cognome')
+        targa = request.form.get('targa').strip().upper()
+        data_inizio = request.form.get('data_inizio')
+        marca = request.form.get('marca')
+        larghezza = request.form.get('larghezza')
+        rapporto = request.form.get('rapporto')
+        diametro = request.form.get('diametro')
+        note = request.form.get('note')
+
+        # Validazioni lato server
+        if not targa or len(targa) != 7:
+            flash("La targa deve essere esattamente di 7 caratteri.", "danger")
+            return redirect(url_for('inserisci_gommeclienti'))
+
+        # Inserimento nel DB
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO gomme_clienti (nome, cognome, targa, data_inizio, marca, larghezza, rapporto, diametro, note)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (nome, cognome, targa, data_inizio, marca, larghezza, rapporto, diametro, note))
+        conn.commit()
+        conn.close()
+
+        flash("Gomma cliente inserita correttamente!", "success")
+        return redirect(url_for('giacenza_gommeclienti'))
+
+    return render_template('inserisci_gommeclienti.html', marche_clienti=marche_clienti)
+
+@app.route('/giacenza_gommeclienti')
+@login_required
+def giacenza_gommeclienti():
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM gomme_clienti ORDER BY data_inizio DESC")
+    gomme_clienti = cur.fetchall()
+    conn.close()
+    return render_template('giacenza_gommeclienti.html', gomme_clienti=gomme_clienti)
+
+@app.route('/modifica_gommeclienti/<int:id>', methods=['GET', 'POST'])
+@login_required
+def modifica_gommeclienti(id):
+    marche_clienti = [
+        "Avon", "Barum", "Bridgestone", "Continental",
+        "Davanti Tyres", "Fortune", "Goodyear", "Hankook",
+        "Kleber", "Kumho", "Ling Long", "Michelin",
+        "Nankang", "Ovation", "Pirelli"
+    ]
+
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM gomme_clienti WHERE id=%s", (id,))
+    gomma = cur.fetchone()
+
+    if not gomma:
+        flash("Gomma cliente non trovata.", "danger")
+        return redirect(url_for('giacenza_gommeclienti'))
+
+    if request.method == 'POST':
+        nome = request.form.get('nome')
+        cognome = request.form.get('cognome')
+        targa = request.form.get('targa').strip().upper()
+        data_inizio = request.form.get('data_inizio')
+        marca = request.form.get('marca')
+        larghezza = request.form.get('larghezza')
+        rapporto = request.form.get('rapporto')
+        diametro = request.form.get('diametro')
+        note = request.form.get('note')
+
+        if not targa or len(targa) != 7:
+            flash("La targa deve essere esattamente di 7 caratteri.", "danger")
+            return redirect(url_for('modifica_gommeclienti', id=id))
+
+        cur.execute("""
+            UPDATE gomme_clienti
+            SET nome=%s, cognome=%s, targa=%s, data_inizio=%s, marca=%s,
+                larghezza=%s, rapporto=%s, diametro=%s, note=%s
+            WHERE id=%s
+        """, (nome, cognome, targa, data_inizio, marca, larghezza, rapporto, diametro, note, id))
+        conn.commit()
+        conn.close()
+
+        flash("Gomma cliente modificata correttamente!", "success")
+        return redirect(url_for('giacenza_gommeclienti'))
+
+    conn.close()
+    return render_template('modifica_gommeclienti.html', gomma=gomma, marche_clienti=marche_clienti)
+
+@app.route('/elimina_gommacliente/<int:id>', methods=['POST'])
+@login_required
+def elimina_gommacliente(id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM gomme_clienti WHERE id=%s", (id,))
+    conn.commit()
+    conn.close()
+    flash("Gomma cliente eliminata.", "warning")
+    return redirect(url_for('giacenza_gommeclienti'))
 
 # =====================================
 # PROMEMORIA - GESTIONE WIDGET GLOBALE

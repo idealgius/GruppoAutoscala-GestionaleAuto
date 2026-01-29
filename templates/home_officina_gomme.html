@@ -1,59 +1,138 @@
 {% extends "base.html" %}
-
 {% block title %}Officina Gomme{% endblock %}
 
 {% block content %}
-<div style="max-width:1000px; margin:0 auto; text-align:center; padding:40px 20px;">
+<div style="max-width:1400px; margin:0 auto; padding:50px 20px; font-family:'Segoe UI', Tahoma, sans-serif;">
 
-    <h1 style="color:#004080; font-size:2.2em; font-weight:600; margin-bottom:15px;">
+    <!-- TITOLO -->
+    <h1 style="text-align:center; color:#004080; font-size:3em; font-weight:700; margin-bottom:15px;">
         Officina Gomme
     </h1>
-    <p style="font-size:1.1em; color:#555; margin-bottom:50px;">
+    <p style="text-align:center; font-size:1.2em; color:#555; margin-bottom:60px;">
         Benvenuto, <strong>{{ username }}</strong>!<br>
-        Seleziona un'operazione da eseguire.
+        Scegli un'operazione da eseguire.
     </p>
 
-    <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:30px;">
-        
-        <!-- CARD: Inserisci Gomme -->
-        <a href="{{ url_for('inserisci_gomme') }}" 
-           style="flex:1 1 280px; max-width:320px; text-decoration:none;">
-            <div style="background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);
-                        padding:30px 20px; transition:transform 0.2s, box-shadow 0.2s;">
-                <div style="font-size:2em; margin-bottom:10px;">➕</div>
-                <h3 style="color:#004080; margin-bottom:10px;">Inserisci Gomme</h3>
-                <p style="color:#666; font-size:0.95em;">
-                    Aggiungi un nuovo treno di gomme nel sistema.
-                </p>
-            </div>
-        </a>
+    <!-- DASHBOARD GRIGLIA 2 COLONNE -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px;">
 
-        <!-- CARD: Giacenza Gomme -->
-        <a href="{{ url_for('giacenza_gomme') }}" 
-           style="flex:1 1 280px; max-width:320px; text-decoration:none;">
-            <div style="background:white; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);
-                        padding:30px 20px; transition:transform 0.2s, box-shadow 0.2s;">
-                <div style="font-size:2em; margin-bottom:10px;">📦</div>
-                <h3 style="color:#004080; margin-bottom:10px;">Giacenza Gomme</h3>
-                <p style="color:#666; font-size:0.95em;">
-                    Visualizza le gomme attualmente in magazzino.
-                </p>
+        <!-- COLONNA GOMME OFFICINA -->
+        <div style="background:#e8f0fe; padding:30px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+            <h2 style="color:#004080; border-bottom:2px solid #004080; padding-bottom:5px; margin-bottom:30px; text-align:center;">
+                Gomme Officina
+            </h2>
+
+            <div style="display:flex; flex-direction:column; gap:25px;">
+
+                <a href="{{ url_for('inserisci_gomme') }}" class="card-link">
+                    <div class="card-dash card-officina">
+                        <i class="fas fa-plus-circle card-icon"></i>
+                        <h3>Inserisci Gomme</h3>
+                        <p>Aggiungi un nuovo treno di gomme nel sistema.</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('giacenza_gomme') }}" class="card-link">
+                    <div class="card-dash card-officina">
+                        <i class="fas fa-box-open card-icon"></i>
+                        <h3>Giacenza Gomme</h3>
+                        <p>Visualizza le gomme attualmente in magazzino.</p>
+                    </div>
+                </a>
+
             </div>
-        </a>
+        </div>
+
+        <!-- COLONNA GOMME CLIENTI -->
+        <div style="background:#e0f7f4; padding:30px; border-radius:16px; box-shadow:0 10px 25px rgba(0,0,0,0.08);">
+            <h2 style="color:#006666; border-bottom:2px solid #006666; padding-bottom:5px; margin-bottom:30px; text-align:center;">
+                Gomme Clienti
+            </h2>
+
+            <div style="display:flex; flex-direction:column; gap:25px;">
+
+                <a href="{{ url_for('inserisci_gommeclienti') }}" class="card-link">
+                    <div class="card-dash card-clienti">
+                        <i class="fas fa-user-plus card-icon"></i>
+                        <h3>Inserisci Gomma Cliente</h3>
+                        <p>Aggiungi gomme per un nuovo cliente.</p>
+                    </div>
+                </a>
+
+                <a href="{{ url_for('giacenza_gommeclienti') }}" class="card-link">
+                    <div class="card-dash card-clienti">
+                        <i class="fas fa-user-tie card-icon"></i>
+                        <h3>Giacenza Gomme Clienti</h3>
+                        <p>Visualizza e gestisci le gomme dei clienti.</p>
+                    </div>
+                </a>
+
+            </div>
+        </div>
 
     </div>
 </div>
 
-<script>
-document.querySelectorAll('a div').forEach(card => {
-    card.addEventListener('mouseenter', () => {
-        card.style.transform = 'scale(1.03)';
-        card.style.boxShadow = '0 6px 14px rgba(0,0,0,0.15)';
-    });
-    card.addEventListener('mouseleave', () => {
-        card.style.transform = 'scale(1)';
-        card.style.boxShadow = '0 4px 10px rgba(0,0,0,0.1)';
-    });
-});
-</script>
+<!-- STILI DASHBOARD -->
+<style>
+.card-link {
+    text-decoration:none;
+}
+
+.card-dash {
+    background:#fff;
+    border-radius:14px;
+    padding:30px 20px;
+    box-shadow:0 8px 22px rgba(0,0,0,0.08);
+    transition: transform 0.35s, box-shadow 0.35s, border 0.35s, background 0.35s;
+    text-align:center;
+    border:2px solid transparent;
+}
+
+.card-dash h3 {
+    font-size:1.6em;
+    font-weight:600;
+    margin-bottom:10px;
+}
+
+.card-dash p {
+    font-size:1em;
+    color:#555;
+    line-height:1.5em;
+}
+
+.card-icon {
+    font-size:3.5em;
+    margin-bottom:15px;
+}
+
+/* COLORI SPECIFICI */
+.card-officina .card-icon,
+.card-officina h3 {
+    color:#004080;
+}
+
+.card-clienti .card-icon,
+.card-clienti h3 {
+    color:#006666;
+}
+
+/* HOVER E ANIMAZIONE */
+.card-dash:hover {
+    transform: translateY(-8px) scale(1.05);
+    box-shadow:0 16px 40px rgba(0,0,0,0.18);
+    border:2px solid currentColor;
+    background:#fdfdfd;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1000px) {
+    div[style*="grid-template-columns"] {
+        grid-template-columns:1fr;
+    }
+}
+</style>
+
+<!-- FONT AWESOME -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}

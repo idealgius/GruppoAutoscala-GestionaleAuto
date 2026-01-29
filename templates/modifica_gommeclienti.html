@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Modifica Gomma Cliente{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width:900px; margin-top:40px;">
+
+    <h2 class="mb-4" style="display:flex; align-items:center; gap:10px; color:#004080;">
+        <i class="fas fa-user"></i> <i class="fas fa-box"></i> Modifica Gomma Cliente
+    </h2>
+
+    <form id="form-modifica-gommacliente" method="POST" action="{{ url_for('modifica_gommeclienti', id=gomma.id) }}" class="border p-4 rounded shadow-sm bg-light">
+
+        <div class="row mb-4">
+            <div class="col-md-6 col-12 mb-3">
+                <label class="form-label fw-bold">Nome</label>
+                <input type="text" class="form-control" name="nome" value="{{ gomma.nome }}">
+            </div>
+            <div class="col-md-6 col-12 mb-3">
+                <label class="form-label fw-bold">Cognome</label>
+                <input type="text" class="form-control" name="cognome" value="{{ gomma.cognome }}">
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold">Targa</label>
+            <input type="text" class="form-control" name="targa" value="{{ gomma.targa }}" required maxlength="7" minlength="7">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold">Data inizio stock</label>
+            <input type="date" class="form-control" name="data_inizio" value="{{ gomma.data_inizio.strftime('%Y-%m-%d') }}" required>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label fw-bold">Marca</label>
+            <select name="marca" class="form-select" required>
+                {% for m in marche_clienti %}
+                <option value="{{ m }}" {% if gomma.marca == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3 col-6 mb-3">
+                <label class="form-label fw-bold">Larghezza</label>
+                <input type="text" class="form-control" name="larghezza" value="{{ gomma.larghezza }}" required pattern="\d{3}">
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <label class="form-label fw-bold">Rapporto</label>
+                <input type="text" class="form-control" name="rapporto" value="{{ gomma.rapporto }}" required pattern="\d{2,3}">
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <label class="form-label fw-bold">Diametro</label>
+                <input type="text" class="form-control" name="diametro" value="{{ gomma.diametro }}" required pattern="\d{2}">
+            </div>
+            <div class="col-md-3 col-6 mb-3">
+                <label class="form-label fw-bold">Note</label>
+                <input type="text" class="form-control" name="note" value="{{ gomma.note }}">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg">💾 Salva Modifiche</button>
+
+    </form>
+</div>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script>
+document.getElementById('form-modifica-gommacliente').addEventListener('submit', function(e){
+    const targa = this.targa.value.trim();
+    const errors = [];
+
+    if(targa.length !== 7){
+        errors.push("La targa deve essere esattamente di 7 caratteri");
+    }
+
+    if(errors.length > 0){
+        alert("Errore:\n- " + errors.join("\n- "));
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

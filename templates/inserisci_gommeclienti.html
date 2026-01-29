@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Inserisci Gomme Clienti{% endblock %}
+
+{% block content %}
+<div style="max-width:900px; margin:0 auto; padding:40px 20px;">
+
+    <div class="card-form">
+        <h2 class="mb-4" style="display:flex; align-items:center; gap:10px;">
+            <i class="fas fa-user-tie"></i> Inserisci Gomme Cliente
+        </h2>
+
+        <form id="form-gomme-clienti" method="POST" action="{{ url_for('inserisci_gommeclienti') }}">
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Nome</label>
+                    <input type="text" class="form-control" name="nome" placeholder="Nome">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Cognome</label>
+                    <input type="text" class="form-control" name="cognome" placeholder="Cognome">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Targa <small>(obbligatoria, 7 caratteri)</small></label>
+                <input type="text" class="form-control" name="targa" placeholder="AB123CD" required maxlength="7" minlength="7">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Data inizio stock</label>
+                <input type="date" class="form-control" name="data_inizio" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Marca</label>
+                <select name="marca" class="form-select" required>
+                    <option value="">Seleziona marca...</option>
+                    {% for m in marche_clienti %}
+                        <option value="{{ m }}" {% if request.form.marca == m %}selected{% endif %}>{{ m }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- MISURE ORIZZONTALI -->
+            <div class="row mb-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Larghezza</label>
+                    <input type="text" class="form-control" name="larghezza" required placeholder="205" pattern="\d{3}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Rapporto</label>
+                    <input type="text" class="form-control" name="rapporto" required placeholder="55" pattern="\d{2,3}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Diametro</label>
+                    <input type="text" class="form-control" name="diametro" required placeholder="16" pattern="\d{2}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Note</label>
+                    <textarea class="form-control" name="note" placeholder="Note aggiuntive..." rows="1"></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Inserisci Gomma Cliente</button>
+        </form>
+    </div>
+</div>
+
+<!-- STILI CARD FORM -->
+<style>
+.card-form {
+    background:#fff;
+    border-radius:14px;
+    padding:30px 25px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.08);
+    transition: box-shadow 0.3s;
+}
+.card-form:hover {
+    box-shadow:0 12px 30px rgba(0,0,0,0.12);
+}
+
+.card-form h2 i {
+    color:#004080;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color:#004080;
+    box-shadow:0 0 6px rgba(0,64,128,0.2);
+    outline:none;
+}
+</style>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+<!-- VALIDAZIONE TARGA -->
+<script>
+document.getElementById('form-gomme-clienti').addEventListener('submit', function(e){
+    const targa = this.targa.value.trim();
+    const larghezza = this.larghezza.value.trim();
+    const rapporto = this.rapporto.value.trim();
+    const diametro = this.diametro.value.trim();
+    const errors = [];
+
+    if(targa.length !== 7){
+        errors.push("La targa deve essere esattamente di 7 caratteri");
+    }
+    if(!/^\d{3}$/.test(larghezza)) errors.push("Larghezza deve essere 3 numeri");
+    if(!/^\d{2,3}$/.test(rapporto)) errors.push("Rapporto deve essere 2 o 3 numeri");
+    if(!/^\d{2}$/.test(diametro)) errors.push("Diametro deve essere 2 numeri");
+
+    if(errors.length > 0){
+        alert("Errore:\n- " + errors.join("\n- "));
+        e.preventDefault();
+    }
+});
+</script>
+
+{% endblock %}

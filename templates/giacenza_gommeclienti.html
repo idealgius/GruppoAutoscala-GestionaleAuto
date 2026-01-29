@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Giacenza Gomme Clienti{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px; margin:0 auto; padding:40px 20px;">
+
+    <h1 style="text-align:center; color:#004080; margin-bottom:30px; display:flex; justify-content:center; align-items:center; gap:10px;">
+        <i class="fas fa-user"></i> <i class="fas fa-box"></i> Giacenza Gomme Clienti
+    </h1>
+
+    {% if gomme_clienti %}
+    <div id="lista-gomme-clienti" style="display:flex; flex-direction:column; gap:15px;">
+
+        {% for g in gomme_clienti %}
+        <div class="gomma-cliente-card" style="padding:15px; border-radius:10px; background:#f9f9f9; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong>{{ g.nome }} {{ g.cognome }}</strong> — Targa: <strong>{{ g.targa }}</strong><br>
+                <span>Data inizio stock: {{ g.data_inizio.strftime("%d/%m/%Y") }}</span><br>
+                <span>Marca: {{ g.marca }} — Misura: {{ g.larghezza }}/{{ g.rapporto }} R{{ g.diametro }}</span><br>
+                <span>Note: {{ g.note or "Nessuna nota" }}</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <a href="{{ url_for('modifica_gommeclienti', id=g.id) }}" class="btn btn-sm btn-success">✏ Modifica</a>
+                <form action="{{ url_for('elimina_gommacliente', id=g.id) }}" method="POST">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Eliminare questa gomma cliente?')">🗑️ Elimina</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+    {% else %}
+    <p style="text-align:center; color:#666;">Nessuna gomma cliente inserita.</p>
+    {% endif %}
+
+</div>
+
+<style>
+.gomma-cliente-card:hover {
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    transition: all 0.2s;
+}
+</style>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}
