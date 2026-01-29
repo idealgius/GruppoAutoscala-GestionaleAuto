@@ -142,6 +142,36 @@
     border-color:#004080;
     box-shadow:0 0 5px rgba(0,64,128,0.4);
 }
+
+/* PANEL CORRETTO */
+.custom-select-panel {
+    position: absolute; /* overlay sopra tutti i div */
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 180px; /* altezza fissa con scroll */
+    overflow-y: auto;
+    border:1px solid #ccc;
+    border-radius:6px;
+    background:#fff;
+    z-index:1000;
+    box-shadow:0 4px 12px rgba(0,0,0,0.15);
+}
+.custom-select-panel .opt-row {
+    padding:6px 8px;
+    cursor:pointer;
+}
+.custom-select-panel .opt-row:hover {
+    background:#f0f8ff;
+}
+.search-input {
+    width: 95%;
+    margin: 5px auto;
+    display:block;
+    padding:4px 6px;
+    border:1px solid #ccc;
+    border-radius:4px;
+}
 </style>
 
 <script>
@@ -173,25 +203,42 @@ function makeSearchableSelect(selectId){
         closePanel();
         panel = document.createElement("div");
         panel.className = "custom-select-panel";
+        panel.style.width = wrapper.offsetWidth + "px"; // larghezza corretta
+
         const input = document.createElement("input");
         input.type="text"; input.placeholder="Cerca..."; input.className="search-input";
         panel.appendChild(input);
+
         const options = Array.from(select.options).map(opt=>({text:opt.textContent,value:opt.value,norm:normalizzaMisura(opt.value)}));
         function render(term=""){
             panel.querySelectorAll(".opt-row").forEach(e=>e.remove());
             const termNorm = normalizzaMisura(term);
-            options.filter(o=>!termNorm || o.norm.startsWith(termNorm)).sort((a,b)=>a.norm.localeCompare(b.norm)).forEach(o=>{
+            options.filter(o=>!termNorm || o.norm.startsWith(termNorm))
+                   .sort((a,b)=>a.norm.localeCompare(b.norm))
+                   .forEach(o=>{
                 const row = document.createElement("div");
                 row.className="opt-row"; row.textContent=o.text;
-                row.addEventListener("click",()=>{select.value=o.value; closePanel(); filtraGomme();});
+                row.addEventListener("click",()=>{
+                    select.value=o.value; 
+                    closePanel(); 
+                    filtraGomme();
+                });
                 panel.appendChild(row);
             });
         }
         render("");
         input.addEventListener("input",()=>{render(input.value);});
+
+        wrapper.style.position = "relative"; // necessario per posizionamento assoluto
         wrapper.appendChild(panel);
         input.focus();
-        setTimeout(()=>{document.addEventListener("click",function handler(e){if(!wrapper.contains(e.target)){closePanel(); document.removeEventListener("click",handler);}},20);});
+
+        setTimeout(()=>{document.addEventListener("click",function handler(e){
+            if(!wrapper.contains(e.target)){
+                closePanel(); 
+                document.removeEventListener("click",handler);
+            }
+        },20);});
     }
     select.addEventListener("click", e=>{ e.stopPropagation(); panel ? closePanel() : openPanel(); });
 }
