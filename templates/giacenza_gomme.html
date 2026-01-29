@@ -3,374 +3,284 @@
 {% block title %}Giacenza Gomme{% endblock %}
 
 {% block content %}
-<h1 style="text-align:center; color:#004080; margin-bottom:30px;">📦 Giacenza Gomme</h1>
+<h1 style="text-align:center; color:#004080; margin-bottom:30px; font-weight:700; font-family:'Segoe UI', Tahoma, sans-serif;">📦 Giacenza Gomme</h1>
 
 {% set solo_lettura = session.get('ruolo') == 'accettazione' %}
 
 {% if gomme %}
-    <!-- FILTRI -->
-    <div style="max-width:900px; margin:0 auto 20px auto; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
 
-        <!-- WRAPPER PER MARCA -->
-        <div class="select-wrapper">
-            <select id="filtro-marca">
-                <option value="">Tutte le marche</option>
-                {% for m in gomme|map(attribute='marca')|unique|sort %}
-                    <option value="{{ m }}">{{ m }}</option>
-                {% endfor %}
-            </select>
-        </div>
+<!-- BARRA STAMPA PROFESSIONALE (NUOVA, VISIBILE) -->
+<div style="max-width:900px; margin:0 auto 20px auto; display:flex; justify-content:flex-end; align-items:center; gap:10px;">
+    <button id="select-all-print" class="btn btn-sm btn-outline-primary">✔ Seleziona tutte</button>
+    <button id="deselect-all-print" class="btn btn-sm btn-outline-secondary">✖ Deseleziona tutte</button>
+    <button id="print-selected" class="btn btn-sm btn-success">🖨️ Stampa giacenza</button>
+</div>
 
-        <!-- WRAPPER PER MISURA -->
-        <div class="select-wrapper">
-            <select id="filtro-misura">
-                <option value="">Tutte le misure</option>
-                {% for g in gomme %}
-                    {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
-                    <option value="{{ misura }}">{{ misura }}</option>
-                {% endfor %}
-            </select>
-        </div>
+<!-- FILTRI -->
+<div style="max-width:900px; margin:0 auto 20px auto; display:flex; gap:12px; flex-wrap:wrap; justify-content:center; align-items:center;">
 
+    <div class="select-wrapper">
+        <select id="filtro-marca" class="form-select form-select-sm">
+            <option value="">Tutte le marche</option>
+            {% for m in gomme|map(attribute='marca')|unique|sort %}
+                <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+        </select>
     </div>
 
-    <div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:15px;">
-        {% for g in gomme %}
-        {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
-        <div class="gomma-item"
-             data-id="{{ g.id }}"
-             data-marca="{{ g.marca }}"
-             data-misura="{{ misura }}"
-             style="padding:15px; border-radius:10px; background:#f2f2f2; box-shadow:0 2px 5px rgba(0,0,0,0.15);">
+    <div class="select-wrapper">
+        <select id="filtro-misura" class="form-select form-select-sm">
+            <option value="">Tutte le misure</option>
+            {% for g in gomme %}
+                {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
+                <option value="{{ misura }}">{{ misura }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="flex:1;">
-                    <strong style="font-size:18px;">{{ g.marca }}</strong>
-                    <div style="font-size:16px; margin-bottom:5px;">
-                        {{ misura }}
-                    </div>
+<div id="lista-gomme" style="max-width:900px; margin:0 auto; display:flex; flex-direction:column; gap:18px;">
+    {% for g in gomme %}
+    {% set misura = g.larghezza ~ '/' ~ g.rapporto ~ ' R' ~ g.diametro %}
+    <div class="gomma-item"
+         data-id="{{ g.id }}"
+         data-marca="{{ g.marca }}"
+         data-misura="{{ misura }}"
+         style="padding:18px; border-radius:12px; background:#f9f9f9; box-shadow:0 4px 12px rgba(0,0,0,0.1); transition: all 0.25s ease-in-out;">
 
-                    <div style="margin-top:8px;">
-                        Prezzo unitario:
-                        <input type="text" value="{{ g.prezzo_unitario }}"
-                               class="prezzo-unitario"
-                               style="width:70px;"
-                               {% if solo_lettura %}readonly{% endif %}> €
+        <!-- NUOVA CHECKBOX PER STAMPA -->
+        <div style="margin-bottom:8px;">
+            <input type="checkbox" class="select-for-print">
+            <span style="font-size:13px; color:#666;">Seleziona per stampa</span>
+        </div>
 
-                        &nbsp;&nbsp;
-
-                        Prezzo treno:
-                        <input type="text" value="{{ g.prezzo_treno }}"
-                               class="prezzo-treno"
-                               style="width:70px;"
-                               {% if solo_lettura %}readonly{% endif %}> €
-                    </div>
-
-                    <div style="margin-top:10px;">
-                        Disponibilità:
-                        <button class="dec-disponibilita" style="padding:3px 6px;"
-                                {% if solo_lettura %}disabled{% endif %}>-</button>
-                        <span class="quantita" style="font-weight:bold; font-size:16px;">{{ g.disponibilita }}</span>
-                        <button class="inc-disponibilita" style="padding:3px 6px;"
-                                {% if solo_lettura %}disabled{% endif %}>+</button>
-                    </div>
-
-                    <!-- NOTE -->
-                    <div style="margin-top:12px;">
-                        <label><strong>Note:</strong></label><br>
-                        <div class="nota-gomma-box" style="background:#fff; border:1px solid #ccc; padding:8px; border-radius:6px; min-height:50px; position:relative;">
-                            <span class="nota-gomma-text">{{ g.note or 'Nessuna nota' }}</span>
-                            {% if not solo_lettura %}
-                            <textarea class="nota-gomma" style="width:100%; display:none; resize:vertical; min-height:50px;">{{ g.note or '' }}</textarea>
-                            <button class="edit-nota" style="position:absolute; top:5px; right:5px; font-size:0.85em; padding:2px 6px; cursor:pointer;">✏ Modifica</button>
-                            {% endif %}
-                        </div>
-                    </div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="flex:1;">
+                <strong style="font-size:18px; color:#004080;">{{ g.marca }}</strong>
+                <div style="font-size:16px; margin-bottom:8px; color:#333;">
+                    {{ misura }}
                 </div>
 
-                <div>
-                    {% if not solo_lettura %}
-                    <button class="save-gomma"
-                            style="margin-left:15px; padding:7px 12px; background:#28a745; color:white; border:none; border-radius:6px; cursor:pointer;">
-                        💾 Salva
-                    </button>
+                <div style="margin-top:8px; font-size:14px;">
+                    Prezzo unitario:
+                    <input type="text" value="{{ g.prezzo_unitario }}"
+                           class="prezzo-unitario"
+                           style="width:75px; border-radius:4px; border:1px solid #ccc; padding:2px 4px;"
+                           {% if solo_lettura %}readonly{% endif %}> €
 
-                    <button class="delete-gomma"
-                            style="margin-top:10px; margin-left:15px; padding:7px 12px; background:#dc3545; color:white; border:none; border-radius:6px; cursor:pointer;">
-                        ❌ Elimina
-                    </button>
-                    {% endif %}
+                    &nbsp;&nbsp;
+
+                    Prezzo treno:
+                    <input type="text" value="{{ g.prezzo_treno }}"
+                           class="prezzo-treno"
+                           style="width:75px; border-radius:4px; border:1px solid #ccc; padding:2px 4px;"
+                           {% if solo_lettura %}readonly{% endif %}> €
+                </div>
+
+                <div style="margin-top:10px; font-size:14px;">
+                    Disponibilità:
+                    <button class="dec-disponibilita btn-sm btn-secondary"
+                            style="padding:3px 6px; margin-left:4px; margin-right:4px;"
+                            {% if solo_lettura %}disabled{% endif %}>-</button>
+                    <span class="quantita" style="font-weight:bold; font-size:15px;">{{ g.disponibilita }}</span>
+                    <button class="inc-disponibilita btn-sm btn-secondary"
+                            style="padding:3px 6px; margin-left:4px;"
+                            {% if solo_lettura %}disabled{% endif %}>+</button>
+                </div>
+
+                <!-- NOTE -->
+                <div style="margin-top:12px; font-size:14px;">
+                    <label><strong>Note:</strong></label><br>
+                    <div class="nota-gomma-box" style="background:#fff; border:1px solid #ccc; padding:8px; border-radius:6px; min-height:50px; position:relative;">
+                        <span class="nota-gomma-text" style="color:#555;">{{ g.note or 'Nessuna nota' }}</span>
+                        {% if not solo_lettura %}
+                        <textarea class="nota-gomma" style="width:100%; display:none; resize:vertical; min-height:50px; border-radius:4px; border:1px solid #ccc;">{{ g.note or '' }}</textarea>
+                        <button class="edit-nota" style="position:absolute; top:5px; right:5px; font-size:0.85em; padding:2px 6px; cursor:pointer; background:#007bff; color:white; border:none; border-radius:4px;">✏ Modifica</button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
+            <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                {% if not solo_lettura %}
+                <button class="save-gomma btn btn-success"
+                        style="margin-bottom:8px; padding:6px 12px;">
+                    💾 Salva
+                </button>
+
+                <button class="delete-gomma btn btn-danger"
+                        style="padding:6px 12px;">
+                    ❌ Elimina
+                </button>
+                {% endif %}
+            </div>
         </div>
-        {% endfor %}
+
     </div>
+    {% endfor %}
+</div>
 
 {% else %}
-    <p style="text-align:center; color:#666;">Nessuna gomma inserita.</p>
+<p style="text-align:center; color:#666;">Nessuna gomma inserita.</p>
 {% endif %}
 
-
-
-<!-- ========================= -->
-<!--     STILI CUSTOM SELECT   -->
-<!-- ========================= -->
+<!-- STILI CUSTOM SELECT -->
 <style>
-.select-wrapper {
-    position: relative;
-    display: inline-block;
-}
-
 .select-wrapper select {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background: white;
-    cursor: pointer;
-}
-
-.custom-select-panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 2px);
-    background: #ffffff;
-    border: 2px solid #004080;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-    max-height: 250px;
-    overflow-y: auto;
-    z-index: 9999;
-    font-size: 14px;
-}
-
-.custom-select-panel .search-input {
-    width: 100%;
-    padding: 8px 10px;
-    border: none;
-    border-bottom: 1px solid #ccc;
-    outline: none;
-    font-size: 14px;
-    box-sizing: border-box;
-}
-
-.custom-select-panel .opt-row {
-    padding: 6px 10px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
     background: #fff;
+    cursor: pointer;
+    border-radius: 6px;
+    border:1px solid #ccc;
+    padding:5px 8px;
+    min-width:160px;
 }
-
-.custom-select-panel .opt-row:hover {
-    background: #e7f1ff;
-}
-
-@media (max-width: 600px) {
-    .select-wrapper {
-        width: 100%;
-    }
-    .select-wrapper select {
-        width: 100%;
-    }
+.select-wrapper select:focus {
+    outline:none;
+    border-color:#004080;
+    box-shadow:0 0 5px rgba(0,64,128,0.4);
 }
 </style>
 
-
-
-<!-- ========================= -->
-<!--     SCRIPT COMPLETO      -->
-<!-- ========================= -->
 <script>
-
-// 🔥 Normalizza le misure → es. "185/55 R15" diventa "1855515"
-function normalizzaMisura(str) {
-    if (!str) return "";
-    return str.replace(/[^0-9]/g, "");  // tiene solo numeri
-}
+// 🔥 Normalizza le misure
+function normalizzaMisura(str){ return str ? str.replace(/[^0-9]/g,"") : ""; }
 
 // 🔥 Filtra la lista gomme
 function filtraGomme(){
     const marca = document.getElementById("filtro-marca").value;
     const misura = document.getElementById("filtro-misura").value;
-
     const misuraNorm = normalizzaMisura(misura);
-
     document.querySelectorAll('.gomma-item').forEach(div=>{
         const matchMarca = !marca || div.dataset.marca === marca;
-
-        const misuraItemNorm = normalizzaMisura(div.dataset.misura);
-        const matchMisura = !misuraNorm || misuraItemNorm.startsWith(misuraNorm);
-
+        const matchMisura = !misuraNorm || normalizzaMisura(div.dataset.misura).startsWith(misuraNorm);
         div.style.display = (matchMarca && matchMisura) ? 'block' : 'none';
     });
 }
 
-
-
 // =============================
-// 🔥 SELECT CON SEARCHBAR PRO
+// SELECT CON SEARCHBAR
 // =============================
-function makeSearchableSelect(selectId) {
-
+function makeSearchableSelect(selectId){
     const select = document.getElementById(selectId);
     const wrapper = select.parentElement;
-
     let panel = null;
-
-    // Disattiva completamente menu nativo
-    select.addEventListener("mousedown", e => e.preventDefault());
-
-    function closePanel() {
-        if (panel) { panel.remove(); panel = null; }
-    }
-
-    function openPanel() {
+    select.addEventListener("mousedown", e=>e.preventDefault());
+    function closePanel(){ if(panel){panel.remove(); panel=null;} }
+    function openPanel(){
         closePanel();
-
         panel = document.createElement("div");
         panel.className = "custom-select-panel";
-
         const input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "Cerca...";
-        input.className = "search-input";
-
+        input.type="text"; input.placeholder="Cerca..."; input.className="search-input";
         panel.appendChild(input);
-
-        const options = Array.from(select.options).map(opt => ({
-            text: opt.textContent,
-            value: opt.value,
-            norm: normalizzaMisura(opt.value)
-        }));
-
-        function render(term="") {
-            panel.querySelectorAll(".opt-row").forEach(e => e.remove());
-
+        const options = Array.from(select.options).map(opt=>({text:opt.textContent,value:opt.value,norm:normalizzaMisura(opt.value)}));
+        function render(term=""){
+            panel.querySelectorAll(".opt-row").forEach(e=>e.remove());
             const termNorm = normalizzaMisura(term);
-
-            options
-                .filter(o => !termNorm || o.norm.startsWith(termNorm))
-                .sort((a,b)=> a.norm.localeCompare(b.norm))
-                .forEach(o => {
-                    const row = document.createElement("div");
-                    row.className = "opt-row";
-                    row.textContent = o.text;
-
-                    row.addEventListener("click", () => {
-                        select.value = o.value;
-                        closePanel();
-                        filtraGomme();
-                    });
-
-                    panel.appendChild(row);
-                });
+            options.filter(o=>!termNorm || o.norm.startsWith(termNorm)).sort((a,b)=>a.norm.localeCompare(b.norm)).forEach(o=>{
+                const row = document.createElement("div");
+                row.className="opt-row"; row.textContent=o.text;
+                row.addEventListener("click",()=>{select.value=o.value; closePanel(); filtraGomme();});
+                panel.appendChild(row);
+            });
         }
-
         render("");
-
-        input.addEventListener("input", () => {
-            render(input.value);
-        });
-
+        input.addEventListener("input",()=>{render(input.value);});
         wrapper.appendChild(panel);
         input.focus();
-
-        setTimeout(()=>{
-            document.addEventListener("click", function handler(e){
-                if (!wrapper.contains(e.target)) {
-                    closePanel();
-                    document.removeEventListener("click", handler);
-                }
-            });
-        }, 20);
+        setTimeout(()=>{document.addEventListener("click",function handler(e){if(!wrapper.contains(e.target)){closePanel(); document.removeEventListener("click",handler);}},20);});
     }
-
-    select.addEventListener("click", e => {
-        e.stopPropagation();
-        panel ? closePanel() : openPanel();
-    });
+    select.addEventListener("click", e=>{ e.stopPropagation(); panel ? closePanel() : openPanel(); });
 }
 
 makeSearchableSelect("filtro-marca");
 makeSearchableSelect("filtro-misura");
 
-
-
-// =============================
-// 🔥 FUNZIONI GOMME (quantità, note...)
-// =============================
+// 🔥 FUNZIONI GOMME
 {% if not solo_lettura %}
-document.querySelectorAll('.gomma-item').forEach(div => {
+document.querySelectorAll('.gomma-item').forEach(div=>{
+    const id=div.dataset.id;
+    const qta=div.querySelector('.quantita');
+    const prezzoUnit=div.querySelector('.prezzo-unitario');
+    const prezzoTreno=div.querySelector('.prezzo-treno');
+    const notaBox=div.querySelector('.nota-gomma-box');
+    const notaText=notaBox.querySelector('.nota-gomma-text');
+    const notaTextarea=notaBox.querySelector('.nota-gomma');
+    const editBtn=notaBox.querySelector('.edit-nota');
 
-    const id = div.dataset.id;
-    const qta = div.querySelector('.quantita');
-    const prezzoUnit = div.querySelector('.prezzo-unitario');
-    const prezzoTreno = div.querySelector('.prezzo-treno');
+    if(editBtn) editBtn.addEventListener('click',()=>{notaText.style.display='none'; notaTextarea.style.display='block'; notaTextarea.focus();});
 
-    const notaBox = div.querySelector('.nota-gomma-box');
-    const notaText = notaBox.querySelector('.nota-gomma-text');
-    const notaTextarea = notaBox.querySelector('.nota-gomma');
-    const editBtn = notaBox.querySelector('.edit-nota');
+    div.querySelector('.inc-disponibilita').addEventListener('click',()=>{qta.textContent=parseInt(qta.textContent)+1;});
+    div.querySelector('.dec-disponibilita').addEventListener('click',()=>{if(parseInt(qta.textContent)>0) qta.textContent=parseInt(qta.textContent)-1;});
 
-    if(editBtn){
-        editBtn.addEventListener('click', () => {
-            notaText.style.display = 'none';
-            notaTextarea.style.display = 'block';
-            notaTextarea.focus();
-        });
-    }
-
-    div.querySelector('.inc-disponibilita').addEventListener('click', () => {
-        qta.textContent = parseInt(qta.textContent) + 1;
+    div.querySelector('.save-gomma').addEventListener('click', async ()=>{
+        const formData=new FormData();
+        formData.append("prezzo_unitario",prezzoUnit.value.trim());
+        formData.append("prezzo_treno",prezzoTreno.value.trim());
+        formData.append("disponibilita",qta.textContent);
+        formData.append("note",notaTextarea.value.trim());
+        try{
+            const res=await fetch(`/modifica_gomma/${id}`,{method:"POST",body:formData});
+            if(res.ok){ alert("✔ Gomma aggiornata correttamente."); notaText.textContent=notaTextarea.value.trim()||'Nessuna nota'; notaTextarea.style.display='none'; notaText.style.display='block';}
+            else alert("❌ Errore durante l'aggiornamento.");
+        }catch(e){alert("❌ Errore di comunicazione con il server.");}
     });
 
-    div.querySelector('.dec-disponibilita').addEventListener('click', () => {
-        if(parseInt(qta.textContent) > 0){
-            qta.textContent = parseInt(qta.textContent) - 1;
-        }
-    });
-
-    div.querySelector('.save-gomma').addEventListener('click', async () => {
-        const formData = new FormData();
-        formData.append("prezzo_unitario", prezzoUnit.value.trim());
-        formData.append("prezzo_treno", prezzoTreno.value.trim());
-        formData.append("disponibilita", qta.textContent);
-        formData.append("note", notaTextarea.value.trim());
-
-        try {
-            const res = await fetch(`/modifica_gomma/${id}`, { method: "POST", body: formData });
-            if(res.ok){
-                alert("✔ Gomma aggiornata correttamente.");
-                notaText.textContent = notaTextarea.value.trim() || 'Nessuna nota';
-                notaTextarea.style.display = 'none';
-                notaText.style.display = 'block';
-            } else {
-                alert("❌ Errore durante l'aggiornamento.");
-            }
-        } catch(e){
-            alert("❌ Errore di comunicazione con il server.");
-        }
-    });
-
-    div.querySelector('.delete-gomma').addEventListener('click', async () => {
+    div.querySelector('.delete-gomma').addEventListener('click', async ()=>{
         if(!confirm('Eliminare questa gomma?')) return;
-
-        try {
-            const res = await fetch(`/elimina_gomma/${id}`, { method: "POST" });
-            if(res.ok){
-                div.remove();
-                alert("🗑️ Gomma eliminata.");
-            } else {
-                alert("❌ Errore durante l'eliminazione.");
-            }
-        } catch(e){
-            alert("❌ Errore di comunicazione con il server.");
-        }
+        try{
+            const res=await fetch(`/elimina_gomma/${id}`,{method:"POST"});
+            if(res.ok){div.remove(); alert("🗑️ Gomma eliminata.");} else alert("❌ Errore durante l'eliminazione.");
+        }catch(e){alert("❌ Errore di comunicazione con il server.");}
     });
-
 });
 {% endif %}
+
+// 🔥 STAMPA PROFESSIONALE CLIENT-SIDE (NUOVA, NON TOCCA NIENTE)
+document.getElementById('select-all-print').onclick = ()=>document.querySelectorAll('.select-for-print').forEach(c=>c.checked=true);
+document.getElementById('deselect-all-print').onclick = ()=>document.querySelectorAll('.select-for-print').forEach(c=>c.checked=false);
+
+document.getElementById('print-selected').onclick = ()=>{
+    const selezionate = Array.from(document.querySelectorAll('.gomma-item'))
+        .filter(g=>g.querySelector('.select-for-print').checked);
+
+    if(selezionate.length===0){ alert('Seleziona almeno una gomma da stampare'); return; }
+
+    let html = `<html><head><title>Giacenza Gomme</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin:20px; }
+        table { width:100%; border-collapse: collapse; margin-top:20px; }
+        th, td { border:1px solid #000; padding:6px; text-align:left; font-size:12px; }
+        th { background:#eee; }
+    </style>
+    </head><body>
+    <h2>Giacenza Gomme</h2>
+    <table>
+        <tr><th>Marca</th><th>Misura</th><th>Disponibilità</th><th>Prezzo unitario</th><th>Prezzo treno</th><th>Note</th></tr>`;
+
+    selezionate.forEach(g=>{
+        const note = g.querySelector('.nota-gomma-text')?.innerText || '';
+        html += `<tr>
+            <td>${g.dataset.marca}</td>
+            <td>${g.dataset.misura}</td>
+            <td>${g.querySelector('.quantita').innerText}</td>
+            <td>${g.querySelector('.prezzo-unitario')?.value || ''}</td>
+            <td>${g.querySelector('.prezzo-treno')?.value || ''}</td>
+            <td>${note}</td>
+        </tr>`;
+    });
+
+    html += `</table></body></html>`;
+
+    const w = window.open('');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    w.print();
+};
 </script>
 
 {% endblock %}

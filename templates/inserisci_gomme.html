@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% block content %}
+{% block title %}Inserisci Gomme{% endblock %}
 
-<h2 class="mb-4">Inserisci Gomme</h2>
+{% block content %}
+<h2 class="mb-4">➕ Inserisci Gomme</h2>
 
 <div class="container">
 
@@ -66,44 +67,14 @@
             <textarea class="form-control" name="note" rows="2" placeholder="Note aggiuntive...">{{ request.form.note or '' }}</textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary mt-2">Inserisci Gomma</button>
+        <div class="d-flex justify-content-between mt-3">
+            <button type="submit" class="btn btn-primary">Inserisci Gomma</button>
+            <a href="{{ url_for('giacenza_gomme') }}" class="btn btn-secondary">
+                📦 Vai a Giacenza Gomme
+            </a>
+        </div>
+
     </form>
-
-    <hr class="my-5">
-
-    <!-- TABELLA GOMME GIÀ INSERITE -->
-    <h3 class="mb-3">Gomme Registrate</h3>
-
-    {% if gomme %}
-    <table class="table table-striped table-bordered">
-        <thead class="table-dark">
-            <tr>
-                <th>Marca</th>
-                <th>Misura</th>
-                <th>Prezzo Unitario</th>
-                <th>Prezzo Treno</th>
-                <th>Disponibilità</th>
-                <th>Note</th>
-                <th>Data Inserimento</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for g in gomme %}
-            <tr>
-                <td>{{ g.marca }}</td>
-                <td>{{ g.larghezza }}/{{ g.rapporto }} R{{ g.diametro }}</td>
-                <td>{{ "%.2f"|format(g.prezzo_unitario) }} €</td>
-                <td>{{ "%.2f"|format(g.prezzo_treno) }} €</td>
-                <td>{{ g.disponibilita }}</td>
-                <td>{{ g.note }}</td>
-                <td>{{ g.data_creazione.strftime("%d/%m/%Y %H:%M") }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p>Nessuna gomma inserita.</p>
-    {% endif %}
 
 </div>
 
