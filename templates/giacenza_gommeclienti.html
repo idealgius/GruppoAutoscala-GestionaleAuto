@@ -52,9 +52,7 @@
             <div class="card-actions">
                 <a href="{{ url_for('modifica_gommeclienti', id=g.id) }}"
                    class="action-btn btn-modifica"
-                   title="Modifica">
-                    ✏️
-                </a>
+                   title="Modifica">✏️</a>
 
                 <form action="{{ url_for('elimina_gommacliente', id=g.id) }}"
                       method="POST"
@@ -70,15 +68,14 @@
 
         </div>
         {% endfor %}
-
     </div>
+
     {% else %}
     <p class="empty-text">Nessuna gomma cliente inserita.</p>
     {% endif %}
 </div>
 
 <style>
-/* STRUTTURA */
 .page-container {
     max-width:1000px;
     margin:0 auto;
@@ -136,6 +133,7 @@
     box-shadow:0 6px 16px rgba(0,0,0,0.15);
 }
 
+/* INFO */
 .card-info {
     display:flex;
     flex-direction:column;
@@ -153,29 +151,19 @@
     margin-left:8px;
     font-size:13px;
 }
-.card-row {
-    font-size:14px;
-}
 .card-note {
-    margin-top:6px;
     font-size:13px;
-    color:#555;
     background:#fff;
     padding:6px 10px;
     border-radius:6px;
     border:1px solid #ddeeee;
 }
 
-/* AZIONI — QUI È LA MAGIA */
+/* AZIONI */
 .card-actions {
     display:flex;
     flex-direction:column;
     gap:10px;
-    justify-content:center;
-    align-items:center;
-}
-.action-form {
-    display:flex;
 }
 .action-btn {
     width:38px;
@@ -185,56 +173,52 @@
     align-items:center;
     justify-content:center;
     font-size:16px;
-    cursor:pointer;
     border:none;
     text-decoration:none;
+    cursor:pointer;
 }
 .btn-modifica {
     background:#2bb3b1;
     color:white;
 }
-.btn-modifica:hover {
-    background:#239998;
-}
 .btn-elimina {
     background:#4aa3c7;
     color:white;
 }
-.btn-elimina:hover {
-    background:#3a8eb0;
-}
-
-/* EMPTY */
-.empty-text {
-    text-align:center;
-    color:#666;
-}
 </style>
 
 <script>
-document.getElementById("filtro-nome").addEventListener("input", filtra);
-document.getElementById("filtro-targa").addEventListener("input", function(){
-    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+const filtroNome = document.getElementById("filtro-nome");
+const filtroTarga = document.getElementById("filtro-targa");
+
+filtroNome.addEventListener("input", filtra);
+filtroTarga.addEventListener("input", function () {
+    this.value = normalizzaTarga(this.value);
     filtra();
 });
 
-function targaValida(t){
-    return /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(t);
+function normalizzaTarga(val) {
+    val = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let out = '';
+
+    for (let i = 0; i < val.length && i < 7; i++) {
+        const c = val[i];
+        if ((i < 2 || i > 4) && /[A-Z]/.test(c)) out += c;
+        else if (i >= 2 && i <= 4 && /[0-9]/.test(c)) out += c;
+    }
+    return out;
 }
 
-function filtra(){
+function filtra() {
     const nome = filtroNome.value.toLowerCase();
     const targa = filtroTarga.value.toUpperCase();
 
-    document.querySelectorAll(".gomma-cliente-card").forEach(card=>{
+    document.querySelectorAll(".gomma-cliente-card").forEach(card => {
         const okNome = !nome || card.dataset.nome.includes(nome);
-        const okTarga = !targa || (targaValida(targa) && card.dataset.targa === targa);
+        const okTarga = !targa || card.dataset.targa.startsWith(targa);
         card.style.display = (okNome && okTarga) ? "flex" : "none";
     });
 }
-
-const filtroNome = document.getElementById("filtro-nome");
-const filtroTarga = document.getElementById("filtro-targa");
 </script>
 
 <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
