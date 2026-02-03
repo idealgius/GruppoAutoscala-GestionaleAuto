@@ -1932,7 +1932,7 @@ def inserisci_gomme():
 
     marche = ["Avon", "Barum", "Bridgestone", "Continental", 
               "Davanti Tyres", "Fortune", "Goodyear", "Hankook", "Kleber", 
-              "Kumho", "Ling Long", "Michelin", "Nankang", "Ovation", "Pirelli"]
+              "Kumho", "Ling Long", "Michelin", "Nankang", "Nexen", "Ovation", "Pirelli"]
     marche.sort()
 
     # Manteniamo i valori inseriti

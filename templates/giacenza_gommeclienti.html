@@ -2,46 +2,240 @@
 {% block title %}Giacenza Gomme Clienti{% endblock %}
 
 {% block content %}
-<div style="max-width:1000px; margin:0 auto; padding:40px 20px;">
+<div class="page-container">
 
-    <h1 style="text-align:center; color:#004080; margin-bottom:30px; display:flex; justify-content:center; align-items:center; gap:10px;">
-        <i class="fas fa-user"></i> <i class="fas fa-box"></i> Giacenza Gomme Clienti
+    <h1 class="page-title">
+        <i class="fas fa-user"></i>
+        <i class="fas fa-box"></i>
+        Giacenza Gomme Clienti
     </h1>
 
+    <!-- FILTRI -->
+    <div class="filtri">
+        <input type="text" id="filtro-nome"
+               placeholder="🔍 Cerca nome o cognome"
+               class="filtro-input">
+
+        <input type="text" id="filtro-targa"
+               placeholder="🚗 Targa (es. AB123CD)"
+               maxlength="7"
+               class="filtro-input">
+    </div>
+
     {% if gomme_clienti %}
-    <div id="lista-gomme-clienti" style="display:flex; flex-direction:column; gap:15px;">
+    <div id="lista-gomme-clienti">
 
         {% for g in gomme_clienti %}
-        <div class="gomma-cliente-card" style="padding:15px; border-radius:10px; background:#f9f9f9; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <strong>{{ g.nome }} {{ g.cognome }}</strong> — Targa: <strong>{{ g.targa }}</strong><br>
-                <span>Data inizio stock: {{ g.data_inizio.strftime("%d/%m/%Y") }}</span><br>
-                <span>Marca: {{ g.marca }} — Misura: {{ g.larghezza }}/{{ g.rapporto }} R{{ g.diametro }}</span><br>
-                <span>Note: {{ g.note or "Nessuna nota" }}</span>
+        <div class="gomma-cliente-card"
+             data-nome="{{ (g.nome ~ ' ' ~ g.cognome)|lower }}"
+             data-targa="{{ g.targa|upper }}">
+
+            <div class="card-info">
+                <div class="cliente-nome">
+                    {{ g.nome }} {{ g.cognome }}
+                    <span class="targa">🚗 {{ g.targa }}</span>
+                </div>
+
+                <div class="card-row">
+                    📅 <strong>{{ g.data_inizio.strftime("%d/%m/%Y") }}</strong>
+                </div>
+
+                <div class="card-row">
+                    🛞 <strong>{{ g.marca }} {{ g.larghezza }}/{{ g.rapporto }} R{{ g.diametro }}</strong>
+                </div>
+
+                <div class="card-note">
+                    📝 {{ g.note or "Nessuna nota" }}
+                </div>
             </div>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <a href="{{ url_for('modifica_gommeclienti', id=g.id) }}" class="btn btn-sm btn-success">✏ Modifica</a>
-                <form action="{{ url_for('elimina_gommacliente', id=g.id) }}" method="POST">
-                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Eliminare questa gomma cliente?')">🗑️ Elimina</button>
+
+            <div class="card-actions">
+                <a href="{{ url_for('modifica_gommeclienti', id=g.id) }}"
+                   class="action-btn btn-modifica"
+                   title="Modifica">
+                    ✏️
+                </a>
+
+                <form action="{{ url_for('elimina_gommacliente', id=g.id) }}"
+                      method="POST"
+                      class="action-form">
+                    <button type="submit"
+                            class="action-btn btn-elimina"
+                            title="Elimina"
+                            onclick="return confirm('Eliminare questa gomma cliente?')">
+                        🗑️
+                    </button>
                 </form>
             </div>
+
         </div>
         {% endfor %}
 
     </div>
     {% else %}
-    <p style="text-align:center; color:#666;">Nessuna gomma cliente inserita.</p>
+    <p class="empty-text">Nessuna gomma cliente inserita.</p>
     {% endif %}
-
 </div>
 
 <style>
+/* STRUTTURA */
+.page-container {
+    max-width:1000px;
+    margin:0 auto;
+    padding:40px 20px;
+}
+.page-title {
+    text-align:center;
+    color:#006d6f;
+    margin-bottom:30px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+}
+
+/* FILTRI */
+.filtri {
+    display:flex;
+    gap:15px;
+    justify-content:center;
+    margin-bottom:30px;
+    flex-wrap:wrap;
+}
+.filtro-input {
+    padding:8px 12px;
+    border-radius:8px;
+    border:1px solid #b5dada;
+    min-width:220px;
+    font-size:14px;
+}
+.filtro-input:focus {
+    outline:none;
+    border-color:#2bb3b1;
+    box-shadow:0 0 5px rgba(43,179,177,0.4);
+}
+
+/* CARD */
+#lista-gomme-clienti {
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+}
+.gomma-cliente-card {
+    background:#f7fbfb;
+    border-radius:14px;
+    padding:18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 3px 8px rgba(0,0,0,0.08);
+    transition:0.2s;
+}
 .gomma-cliente-card:hover {
-    box-shadow:0 4px 12px rgba(0,0,0,0.15);
-    transform: translateY(-2px);
-    transition: all 0.2s;
+    transform:translateY(-2px);
+    box-shadow:0 6px 16px rgba(0,0,0,0.15);
+}
+
+.card-info {
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+.cliente-nome {
+    font-size:16px;
+    font-weight:700;
+    color:#004f50;
+}
+.targa {
+    background:#e0f2f2;
+    padding:3px 8px;
+    border-radius:6px;
+    margin-left:8px;
+    font-size:13px;
+}
+.card-row {
+    font-size:14px;
+}
+.card-note {
+    margin-top:6px;
+    font-size:13px;
+    color:#555;
+    background:#fff;
+    padding:6px 10px;
+    border-radius:6px;
+    border:1px solid #ddeeee;
+}
+
+/* AZIONI — QUI È LA MAGIA */
+.card-actions {
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    justify-content:center;
+    align-items:center;
+}
+.action-form {
+    display:flex;
+}
+.action-btn {
+    width:38px;
+    height:38px;
+    border-radius:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:16px;
+    cursor:pointer;
+    border:none;
+    text-decoration:none;
+}
+.btn-modifica {
+    background:#2bb3b1;
+    color:white;
+}
+.btn-modifica:hover {
+    background:#239998;
+}
+.btn-elimina {
+    background:#4aa3c7;
+    color:white;
+}
+.btn-elimina:hover {
+    background:#3a8eb0;
+}
+
+/* EMPTY */
+.empty-text {
+    text-align:center;
+    color:#666;
 }
 </style>
+
+<script>
+document.getElementById("filtro-nome").addEventListener("input", filtra);
+document.getElementById("filtro-targa").addEventListener("input", function(){
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+    filtra();
+});
+
+function targaValida(t){
+    return /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(t);
+}
+
+function filtra(){
+    const nome = filtroNome.value.toLowerCase();
+    const targa = filtroTarga.value.toUpperCase();
+
+    document.querySelectorAll(".gomma-cliente-card").forEach(card=>{
+        const okNome = !nome || card.dataset.nome.includes(nome);
+        const okTarga = !targa || (targaValida(targa) && card.dataset.targa === targa);
+        card.style.display = (okNome && okTarga) ? "flex" : "none";
+    });
+}
+
+const filtroNome = document.getElementById("filtro-nome");
+const filtroTarga = document.getElementById("filtro-targa");
+</script>
 
 <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}
